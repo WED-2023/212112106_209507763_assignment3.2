@@ -1,0 +1,23 @@
+# Environment and package folders
+node_modules/
+.venv/
+.env
+
+# Python dependencies
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Node.js dependencies
+npm-debug.log
+yarn-error.log
+.pnpm-debug.log
+
+# Misc
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "assignment-3.2": "file:",
     "axios": "^0.19.2",
     "bcrypt": "^4.0.1",
     "client-sessions": "^0.8.0",
