@@ -1,6 +1,5 @@
 # Environment and package folders
 node_modules/
-.venv/
 .env
 
 # Python dependencies
