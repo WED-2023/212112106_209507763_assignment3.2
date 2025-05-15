@@ -31,7 +31,6 @@ async function getRecipeInformationFROMLAB(recipe_id) {
   return await axios.get(`${api_domain}/recipes/${recipe_id}/information`, {
     params: {
       includeNutrition: false,
-      // apiKey: "e43e55e61c3a45028f3147ef60ea76be"
       apiKey: process.env.spooncular_apiKey
     }
   });
