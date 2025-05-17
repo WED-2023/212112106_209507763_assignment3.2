@@ -10,6 +10,41 @@ async function getFavoriteRecipes(user_id){
 }
 
 
+//by ABED
+/**
+ * Retrieve user details by username
+ * @param {string} username 
+ */
+async function getUserDetails(username) {
+  try {
+    const user = await DButils.execQuery(`SELECT * FROM users WHERE username = '${username}'`);
+    return user.length ? user[0] : null;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Check if a username already exists
+ * @param {string} username 
+ */
+async function isUsernameTaken(username) {
+  try {
+    const users = await DButils.execQuery("SELECT username FROM users");
+    return users.some((u) => u.username === username);
+  } catch (error) {
+    throw error;
+  }
+}
+
+module.exports = {
+  getUserDetails,
+  isUsernameTaken,
+};
+""
+
+//by ABED
+
 
 exports.markAsFavorite = markAsFavorite;
 exports.getFavoriteRecipes = getFavoriteRecipes;

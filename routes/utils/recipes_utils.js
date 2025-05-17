@@ -1,5 +1,6 @@
 const axios = require("axios");
 const api_domain = "https://api.spoonacular.com/recipes";
+const rest_countries = "https://restcountries.com/v3.1/all"
 
 
 
@@ -18,6 +19,22 @@ async function getRecipeInformation(recipe_id) {
     });
 }
 
+
+/**
+ * Get all countries from the REST Countries API by Abed
+ */
+async function getAllCountries() {
+  try {
+    const response = await axios.get(rest_countries);
+    return response.data.map((country) => ({
+      name: country.name.common,
+      code: country.cca2,
+    }));
+  } catch (error) {
+    console.error("Error fetching countries:", error.message);
+    throw error;
+  }
+}
 
 
 //  from lab7 TODO: check for the correct ruoting path

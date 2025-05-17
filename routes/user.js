@@ -4,6 +4,8 @@ const DButils = require("./utils/DButils");
 const user_utils = require("./utils/user_utils");
 const recipe_utils = require("./utils/recipes_utils");
 
+
+
 /**
  * Authenticate all incoming requests by middleware
  */
@@ -53,6 +55,38 @@ router.get('/favorites', async (req,res,next) => {
 });
 
 
+//by ABED
+
+
+/**
+ * Get user details by username
+ */
+router.get("/:username", async (req, res, next) => {
+  try {
+    const user = await user_utils.getUserDetails(req.params.username);
+    if (!user) {
+      res.status(404).send({ message: "User not found" });
+    } else {
+      res.send(user);
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * Check if a username is already taken
+ */
+router.get("/exists/:username", async (req, res, next) => {
+  try {
+    const exists = await user_utils.isUsernameTaken(req.params.username);
+    res.send({ exists });
+  } catch (error) {
+    next(error);
+  }
+});
+
+//by ABED
 
 
 module.exports = router;
