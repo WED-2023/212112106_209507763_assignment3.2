@@ -1,11 +1,11 @@
 openapi: 3.0.0
 servers:
   # Added by API Auto Mocking Plugin
-  - description: SwaggerHub API Auto Mocking
-    url: https://virtserver.swaggerhub.com/abedshowgan-17f/212112106_209507763_hw3.1/1.0.1
+  - description: Localhost (dev)
+    url: http://localhost:3000
 info:
   description: This is an API designed for users to create, share and explore recipes and create family recipes
-  version: 1.0.1
+  version: 1.0.2
   title: Recipe Sharing API
   contact:
     name: Abed
@@ -392,8 +392,8 @@ components:
       type: object
       required:
         - username
-        - first_name
-        - last_name
+        - firstname
+        - lastname
         - country
         - password
         - password_confirmation
@@ -404,9 +404,9 @@ components:
           minLength: 3
           maxLength: 8
           pattern: '^[A-Za-z]+$'
-        first_name:
+        firstname:
           type: string
-        last_name:
+        lastname:
           type: string
         country:
           type: string
