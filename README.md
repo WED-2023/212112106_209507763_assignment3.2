@@ -9,8 +9,8 @@
 This repository contains the backend server implementation for Assignment 3.2  
 in the course "Internet Development 2025". The backend is built using Node.js and Express.
 
-### Link to Github.IO Website: https://wed-2023.github.io/212112106_209507763_assignment3.2/
-
+- Link to Github.IO Website: [https://wed-2023.github.io/212112106_209507763_assignment3.2/
+](https://wed-2023.github.io/212112106_209507763_assignment3.2/)
 ### About the Project  
 -----------------  
 This project implements a RESTful backend server for the Assignment 3.2 requirements.  
