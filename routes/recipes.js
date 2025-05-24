@@ -7,6 +7,7 @@ const { addMyRecipe } = require("./utils/recipes_utils");
 router.get("/", (req, res) => res.send("I'm here"));
 
 
+//Search API by ID
 router.get("/:recipeId", async (req, res) => {
   const { recipeId } = req.params;
 
@@ -30,6 +31,45 @@ router.get("/:recipeId", async (req, res) => {
 });
 
 
+//Search API by parameters
+// Route: /search with memory of last search
+router.get("/search", async (req, res) => {
+  try {
+    let { query, cuisine, diet, intolerance, limit } = req.query;
+
+    // If no new search query is provided, try loading from session
+    if (!query && req.session.lastSearch) {
+      ({ query, cuisine, diet, intolerance, limit } = req.session.lastSearch);
+      console.log("Using last search from session:", req.session.lastSearch);
+    }
+
+    if (!query) {
+      return res.status(400).json({ message: "No search query provided" });
+    }
+
+    const searchParams = {
+      query,
+      cuisine,
+      diet,
+      intolerances: intolerance,
+      number: limit || 5,
+      includeNutrition: false
+    };
+
+    // Save the current search in session
+    req.session.lastSearch = { query, cuisine, diet, intolerance, limit };
+
+    const data = await recipes_utils.spoonacularGet("/complexSearch", searchParams);
+    const preview = recipes_utils.extractRecipePreview(data);
+    res.status(200).json(preview);
+  } catch (err) {
+    const status = err.response?.status || 500;
+    console.error("Search failed:", err.message);
+    res.status(status).send({ message: "Failed to fetch recipe search results" });
+  }
+});
+
+// Random Get 3 Recipes
 router.get("/", async (req, res, next) => {
   try {
     const data = await recipes_utils.spoonacularGet("/random", { number: 3 });
@@ -132,7 +172,7 @@ router.get("/", async (req, res, next) => {
 //BY ABED
 
 
-
+// change execQuery to connection like spoonacularGET
 router.post("/create", async (req, res, next) => {
   try {
     if (!req.session?.username) {

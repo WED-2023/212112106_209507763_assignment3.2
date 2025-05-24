@@ -83,7 +83,7 @@ router.post("/auth/register", async (req, res, next) => {
         [username, firstname, lastname, country, hash_password, email]
     );
 
-    await connection.query("COMMIT");
+    await connection.query("COMMIT"); // doesnt enter intom DB the last commit
 
     await connection.release();
     res.status(201).send({ message: "user created", success: true });

@@ -25,6 +25,10 @@ async function getRecipeInformation(recipe_id) {
  Returns the response data from Spoonacular, or throws an error if the request fails.
  */
 async function spoonacularGet(path, params = {}) {
+     if (!process.env.spooncular_apiKey) {
+        throw new Error("Missing Spoonacular API key in environment variables.");
+    }
+
     const url = `${api_domain}${path}`;
     const fullParams = {
         ...params,
