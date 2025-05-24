@@ -2,20 +2,8 @@ const axios = require("axios");
 const api_domain = "https://api.spoonacular.com/recipes";
 const rest_countries = "https://restcountries.com/v3.1/all"
 const DButils = require("./DButils");
+const MySql = require("./MySql"); // adjust path if needed
 
-
-/**
- * Get recipes list from spooncular response and extract the relevant recipe data for preview
- * @param {*} recipes_info
- */
-async function getRecipeInformation(recipe_id) {
-    return await axios.get(`${api_domain}/${recipe_id}/information`, {
-        params: {
-            includeNutrition: false,
-            apiKey: process.env.spooncular_apiKey
-        }
-    });
-}
 
 /*
  spoonacularGet is an async function that sends a GET request to the Spoonacular API.
@@ -62,94 +50,8 @@ function extractRecipePreview(recipe, options = {}) {
 }
 
 
-//  from lab7 TODO: check for the correct ruoting path
 
-/**
- * Get recipes list from spooncular response and extract the relevant recipe data for preview
- * @param {*} recipes_info
- */
-async function getRecipeInformationFROMLAB(recipe_id) {
-  //https://api.spoonacular.com/recipes/complexSearch
-  return await axios.get(`${api_domain}/recipes/${recipe_id}/information`, {
-    params: {
-      includeNutrition: false,
-      apiKey: process.env.spooncular_apiKey
-    }
-  });
-}
-
-//  from lab7
-
-async function getRecipeDetails(recipe_id) {
-    let recipe_info = await getRecipeInformation(recipe_id);
-    let { id, title, readyInMinutes, image, aggregateLikes, vegan, vegetarian, glutenFree } = recipe_info.data;
-
-    return {
-        id: id,
-        title: title,
-        readyInMinutes: readyInMinutes,
-        image: image,
-        popularity: aggregateLikes,
-        vegan: vegan,
-        vegetarian: vegetarian,
-        glutenFree: glutenFree,
-
-    }
-}
-
-
-
-//  from lab7
-
-function extractPreviewRecipeDetails(recipes_info) {
-  return recipes_info.map((recipe_info) => {
-    //check the data type so it can work with diffrent types of data
-    let data = recipe_info;
-    if (recipe_info.data) {
-      data = recipe_info.data;
-    }
-    const {
-      id,
-      title,
-      readyInMinutes,
-      image,
-      aggregateLikes,
-      vegan,
-      vegetarian,
-      glutenFree,
-    } = data;
-    return {
-      id: id,
-      title: title,
-      image: image,
-      readyInMinutes: readyInMinutes,
-      popularity: aggregateLikes,
-      vegan: vegan,
-      vegetarian: vegetarian,
-      glutenFree: glutenFree
-    }
-  })
-}
-
-async function getRecipesPreview(recipes_ids_list) {
-  let promises = [];
-  recipes_ids_list.map((id) => {
-    promises.push(getRecipeInformation(id));
-  });
-  let info_res = await Promise.all(promises);
-  info_res.map((recp) => { console.log(recp.data) });
-  //   console.log(info_res);
-  return extractPreviewRecipeDetails(info_res);
-}
-
-// getRecipesPreview(["663559"]);
-
-//  from lab7
-
-
-
-//BY ABED
-
+// ========================= SQL QUERIES =========================
 
 /**
  * Delete a user-created recipe by ID
@@ -157,21 +59,26 @@ async function getRecipesPreview(recipes_ids_list) {
  * @param {number} recipe_id 
  */
 async function deleteMyRecipe(username, recipe_id) {
-  try {
-    const query = `
-      DELETE FROM MyRecipes
-      WHERE recipe_id = ? AND username = ?
-    `;
+    const connection = await MySql.connection();
 
-    const result = await DButils.execQuery({
-      sql: query,
-      values: [recipe_id, username]
-    });
+    try {
+        await connection.query("START TRANSACTION");
 
-    return result.affectedRows > 0;
-  } catch (error) {
-    throw error;
-  }
+        const result = await connection.query(
+            `DELETE FROM MyRecipes WHERE recipe_id = ? AND username = ?`,
+            [recipe_id, username]
+        );
+
+        await connection.query("COMMIT");
+        return result.affectedRows > 0;
+
+    } catch (error) {
+        await connection.query("ROLLBACK");
+        throw error;
+
+    } finally {
+        await connection.release();
+    }
 }
 
 /**
@@ -180,45 +87,29 @@ async function deleteMyRecipe(username, recipe_id) {
  * @param {object} recipeData 
  */
 async function addMyRecipe(username, recipeData) {
-  try {
-    console.log("addMyRecipe called with:", { username, recipeData }); // Log input data
+    console.log("addMyRecipe called with:", { username, recipeData });
 
     const {
-      recipe_title,
-      recipe_image,
-      prep_duration,
-      vegetarian,
-      vegan,
-      gluten_free,
-      amount_of_meals,
-      instructions,
-      extendedIngredients
+        recipe_title,
+        recipe_image,
+        prep_duration,
+        vegetarian,
+        vegan,
+        gluten_free,
+        amount_of_meals,
+        instructions,
+        extendedIngredients
     } = recipeData;
 
     const query = `
-      INSERT INTO myrecipes (
-        username, recipe_title, recipe_image, prep_duration, vegetarian, vegan, gluten_free, amount_of_meals, instructions, extendedIngredients
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+    INSERT INTO myrecipes (
+      username, recipe_title, recipe_image, prep_duration, vegetarian, vegan,
+      gluten_free, amount_of_meals, instructions, extendedIngredients
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
 
-    console.log("Running SQL query:", query);
-    console.log("With values:", [
-      username,
-      recipe_title,
-      recipe_image,
-      prep_duration,
-      vegetarian,
-      vegan,
-      gluten_free,
-      amount_of_meals,
-      instructions,
-      JSON.stringify(extendedIngredients)
-    ]);
-
-    await DButils.execQuery({
-      sql: query,
-      values: [
+    const values = [
         username,
         recipe_title,
         recipe_image,
@@ -229,24 +120,30 @@ async function addMyRecipe(username, recipeData) {
         amount_of_meals,
         instructions,
         JSON.stringify(extendedIngredients)
-      ]
-    });
+    ];
 
-    console.log("Recipe inserted successfully");
+    const connection = await MySql.connection();
 
-  } catch (error) {
-    console.error("Error inserting recipe:", error);
-    throw error;
-  }
+    try {
+        await connection.query("START TRANSACTION");
+
+        console.log("Running SQL query:", query);
+        console.log("With values:", values);
+
+        await connection.query(query, values);
+
+        await connection.query("COMMIT");
+        console.log("Recipe inserted successfully");
+    } catch (error) {
+        await connection.query("ROLLBACK");
+        console.error("Error inserting recipe:", error);
+        throw error;
+    } finally {
+        await connection.release();
+    }
 }
 
 
-
-
-
-//BY ABED
-
-exports.getRecipeDetails = getRecipeDetails;
 
 module.exports = {
     spoonacularGet,

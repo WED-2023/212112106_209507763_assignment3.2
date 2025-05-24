@@ -134,11 +134,11 @@ paths:
       summary: Search for recipes with optional filters
       operationId: searchRecipes
       description: |
-        Search recipes by name and optionally filter by cuisine, diet, intolerance, and result limit, latest search results are displayed if they are available.
+        Search recipes by name and optionally filter by cuisine, diet, intolerance, and results number, latest search results are displayed if they are available.
       parameters:
         - name: query
           in: query
-          required: true
+          required: false
           schema:
             type: string
           description: Recipe name or keywords to search for
@@ -154,13 +154,13 @@ paths:
           schema:
             type: string
           description: Type of diet to filter by (e.g., vegetarian, keto)
-        - name: intolerance
+        - name: intolerances
           in: query
           required: false
           schema:
             type: string
           description: Comma-separated list of intolerances (e.g., gluten, dairy)
-        - name: limit
+        - name: number
           in: query
           required: false
           schema:
@@ -316,40 +316,20 @@ paths:
           description: Greeting message with first name
 
   /recipes/create:
-    get:
-      tags:
-        - recipes
-      summary: Get create recipe form data
-      operationId: getCreateRecipePage
-      description: |
-        Returns metadata or dynamic values needed to render the Create Recipe page.
-        Could include things like list of available ingredients or validation hints.
-      responses:
-        '200':
-          description: Data for the Create Recipe page
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: Ready to create a recipe
-
     post:
       tags:
         - recipes
-      summary: Create a new recipe
+      summary: Create a new recipe (custom format)
       operationId: createRecipe
       description: |
-        Creates a new recipe with all required preview fields, ingredients list, 
-        preparation steps, and number of meals.
+        Creates a new recipe and stores it in the internal database.
+        Fields must match what the backend expects including extendedIngredients.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/NewRecipe'
+              $ref: '#/components/schemas/CustomNewRecipe'
       responses:
         '201':
           description: Recipe successfully created
@@ -381,6 +361,26 @@ paths:
                 $ref: '#/components/schemas/Recipe'
         '404':
           description: Recipe not found
+
+    delete:
+      tags:
+        - recipes
+      summary: Delete a recipe by ID
+      operationId: deleteRecipe
+      parameters:
+        - name: recipeId
+          in: path
+          required: true
+          description: ID of the recipe to delete from the database
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Recipe deleted successfully
+        '401':
+          description: Unauthorized
+        '404':
+          description: Recipe not found or unauthorized
 components:
   securitySchemes: 
       bearerAuth:
@@ -555,3 +555,56 @@ components:
           type: boolean
         saved_by_user:
           type: boolean
+
+    CustomNewRecipe:
+      type: object
+      required:
+        - recipe_title
+        - recipe_image
+        - prep_duration
+        - vegetarian
+        - vegan
+        - gluten_free
+        - amount_of_meals
+        - instructions
+        - extendedIngredients
+      properties:
+        recipe_title:
+          type: string
+          example: My New Recipe
+        recipe_image:
+          type: string
+          format: uri
+          example: https://example.com/image.jpg
+        prep_duration:
+          type: string
+          example: 30
+        vegetarian:
+          type: boolean
+        vegan:
+          type: boolean
+        gluten_free:
+          type: boolean
+        amount_of_meals:
+          type: integer
+          example: 4
+        instructions:
+          type: string
+          example: |
+            1. Chop onions
+            2. Fry with oil
+            3. Add spices
+            4. Serve
+        extendedIngredients:
+          type: array
+          description: List of ingredients and their amounts
+          items:
+            type: object
+            required: [ name, amount ]
+            properties:
+              name:
+                type: string
+                example: Onion
+              amount:
+                type: string
+                example: 1 large
