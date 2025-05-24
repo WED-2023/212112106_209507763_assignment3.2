@@ -1,8 +1,7 @@
 const axios = require("axios");
 const api_domain = "https://api.spoonacular.com/recipes";
 const rest_countries = "https://restcountries.com/v3.1/all"
-
-
+const DButils = require("./DButils");
 
 
 /**
@@ -41,23 +40,6 @@ async function spoonacularGet(path, params = {}) {
     }
 }
 
-
-
-/**
- * Get all countries from the REST Countries API by Abed
- */
-async function getAllCountries() {
-  try {
-    const response = await axios.get(rest_countries);
-    return response.data.map((country) => ({
-      name: country.name.common,
-      code: country.cca2,
-    }));
-  } catch (error) {
-    console.error("Error fetching countries:", error.message);
-    throw error;
-  }
-}
 
 
 
@@ -113,8 +95,6 @@ async function getRecipeDetails(recipe_id) {
 
 
 
-
-
 //  from lab7
 
 function extractPreviewRecipeDetails(recipes_info) {
@@ -162,11 +142,113 @@ async function getRecipesPreview(recipes_ids_list) {
 
 //  from lab7
 
+
+
+//BY ABED
+
+
+/**
+ * Delete a user-created recipe by ID
+ * @param {string} username 
+ * @param {number} recipe_id 
+ */
+async function deleteMyRecipe(username, recipe_id) {
+  try {
+    const query = `
+      DELETE FROM MyRecipes
+      WHERE recipe_id = ? AND username = ?
+    `;
+
+    const result = await DButils.execQuery({
+      sql: query,
+      values: [recipe_id, username]
+    });
+
+    return result.affectedRows > 0;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Add a new user-created recipe
+ * @param {string} username 
+ * @param {object} recipeData 
+ */
+async function addMyRecipe(username, recipeData) {
+  try {
+    console.log("addMyRecipe called with:", { username, recipeData }); // Log input data
+
+    const {
+      recipe_title,
+      recipe_image,
+      prep_duration,
+      vegetarian,
+      vegan,
+      gluten_free,
+      amount_of_meals,
+      instructions,
+      extendedIngredients
+    } = recipeData;
+
+    const query = `
+      INSERT INTO myrecipes (
+        username, recipe_title, recipe_image, prep_duration, vegetarian, vegan, gluten_free, amount_of_meals, instructions, extendedIngredients
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    console.log("Running SQL query:", query);
+    console.log("With values:", [
+      username,
+      recipe_title,
+      recipe_image,
+      prep_duration,
+      vegetarian,
+      vegan,
+      gluten_free,
+      amount_of_meals,
+      instructions,
+      JSON.stringify(extendedIngredients)
+    ]);
+
+    await DButils.execQuery({
+      sql: query,
+      values: [
+        username,
+        recipe_title,
+        recipe_image,
+        prep_duration,
+        vegetarian,
+        vegan,
+        gluten_free,
+        amount_of_meals,
+        instructions,
+        JSON.stringify(extendedIngredients)
+      ]
+    });
+
+    console.log("Recipe inserted successfully");
+
+  } catch (error) {
+    console.error("Error inserting recipe:", error);
+    throw error;
+  }
+}
+
+
+
+
+
+//BY ABED
+
 exports.getRecipeDetails = getRecipeDetails;
 
 module.exports = {
     spoonacularGet,
     extractRecipePreview,
+    deleteMyRecipe,
+    addMyRecipe
 };
 
 
