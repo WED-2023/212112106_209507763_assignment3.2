@@ -1,0 +1,18 @@
+Login: /auth/login
+curl -i -X POST http://localhost:3000/auth/login -H "Content-Type: application/json" -d "{\"username\":\"abed123\",\"password\":\"AbedShogan5!\"}"
+
+Register /auth/Register
+curl -X POST "http://127.0.0.1:3000/auth/register" ^
+  -H "accept: /" ^
+  -H "Content-Type: application/json" ^
+  -d "{"username":"abed123","firstname":"Abed","lastname":"Showgan","country":"Israel","password":"AbedShogan5!","password_confirmation":"AbedShogan5!","email":"abed@gmail.com"}"
+
+Logout: (need session cookie) /auth/logout
+
+curl -i -X POST http://localhost:3000/auth/logout -H "Cookie: session=vsdoDvnsWEdTXT2qgJxZYw._X7IbQh9VeAwAKd33wBwMD7SMrw8j5hPC8110iQ81FU.1748049018849.86400000.oLF0hZ1YR70bYYnrQ5Iv3zU9LC28NqWBI_wd58avIls"
+
+
+Login (with cookie saving for create recipe)
+curl -i -X POST http://localhost:3000/auth/login -H "Content-Type: application/json" -d "{\"username\":\"abed123\",\"password\":\"AbedShogan5!\"}" --cookie-jar cookies.txt
+
+addMyRecipe (/recipes/create)
