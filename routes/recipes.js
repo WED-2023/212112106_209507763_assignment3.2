@@ -8,7 +8,7 @@ const { addMyRecipe } = require("./utils/recipes_utils");
 //=================== GET ===================
 
 // Random Get 3 Recipes
-router.get("/", async (req, res, next) => {
+router.get("/random", async (req, res, next) => {
   try {
     const data = await recipes_utils.spoonacularGet("/random", { number: 3 });
     const previews = data.recipes.map(recipe =>
@@ -19,6 +19,9 @@ router.get("/", async (req, res, next) => {
     res.status(500).send("Server error while fetching recipes.");
   }
 });
+
+
+
 
 router.get("/search", async (req, res, next) => {
   try {
@@ -61,29 +64,48 @@ router.get("/search", async (req, res, next) => {
 
 
 
-//Search API by ID
+//Search API by ID, first search in database if not exist search in API
 router.get("/:recipeId", async (req, res) => {
   const { recipeId } = req.params;
 
+  let conn;
   try {
-    const data = await recipes_utils.spoonacularGet(`/${recipeId}/information`, {
-      includeNutrition: false
-    });
+    // Step 1: Connect to DB
+    conn = await MySql.connection();
+    const result = await conn.query(
+      "SELECT * FROM myrecipes WHERE recipe_id = ?",
+      [recipeId]
+    );
 
-    const preview = recipes_utils.extractRecipePreview(data);
-    res.status(200).json(preview);
+    if (result.length > 0) {
+      console.log(`Recipe ${recipeId} found in local database.`);
+      res.status(200).json(result[0]);
+    } else {
+      console.log(`Recipe ${recipeId} not found in DB. Fetching from Spoonacular.`);
+
+      // Step 2: Fetch from Spoonacular
+      const data = await recipes_utils.spoonacularGet(`/${recipeId}/information`, {
+        includeNutrition: false
+      });
+
+      const preview = recipes_utils.extractRecipePreview(data);
+      res.status(200).json(preview);
+    }
   } catch (err) {
+    console.error(`Error fetching recipe ${recipeId}:`, err.message);
     const status = err.response?.status || 500;
 
     if (status === 404) {
       res.status(404).send({ message: "Recipe not found" });
     } else {
-      console.error(`Failed to get recipe ${recipeId}:`, err.message);
       res.status(500).send({ message: "Failed to fetch recipe preview" });
+    }
+  } finally {
+    if (conn) {
+      await conn.release(); // Ensure connection is released back to pool
     }
   }
 });
-
 
 //=================== END GET ===================
 

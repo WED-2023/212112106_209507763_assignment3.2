@@ -39,13 +39,11 @@ function extractRecipePreview(recipe, options = {}) {
     return {
         recipe_image: recipe.image,
         recipe_title: recipe.title,
-        prep_duration: `${recipe.readyInMinutes.toString().padStart(2, "0")}:00:00`,
+        prep_duration: recipe.readyInMinutes,
         popularity: recipe.aggregateLikes || 0,
         vegetarian: recipe.vegetarian || false,
         vegan: recipe.vegan || false,
         gluten_free: recipe.glutenFree || false,
-        clicked_by_user: options.clicked_by_user ?? false, // !!!!MAY be will be used later
-        saved_by_user: options.saved_by_user ?? false
     };
 }
 
@@ -65,7 +63,7 @@ async function deleteMyRecipe(username, recipe_id) {
         await connection.query("START TRANSACTION");
 
         const result = await connection.query(
-            `DELETE FROM MyRecipes WHERE recipe_id = ? AND username = ?`,
+            `DELETE FROM myrecipes WHERE recipe_id = ? AND username = ?`,
             [recipe_id, username]
         );
 

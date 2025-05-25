@@ -4,7 +4,49 @@ const MySql = require("../routes/utils/MySql");
 const DButils = require("../routes/utils/DButils");
 const bcrypt = require("bcrypt");
 
+router.get("/", async (req, res) => {
+  try {
+    // Fetch 3 random recipes from the utility function (like /recipes/random)
+    const randomData = await recipes_utils.spoonacularGet("/random", { number: 3 });
+    const randomPreviews = randomData.recipes.map(recipe =>
+      recipes_utils.extractRecipePreview(recipe)
+    );
 
+    // Prepare the response object
+    const response = {
+      randomRecipes: randomPreviews,
+      lastClickedRecipes: []
+    };
+
+    // If user is logged in, fetch last clicked recipe IDs
+    if (req.session?.username) {
+      const conn = await connection();
+      try {
+        const result = await conn.query(
+          "SELECT firstClicked, secondClicked, thirdClicked FROM lastClicks WHERE username = ?",
+          [req.session.username]
+        );
+
+        if (result.length > 0) {
+          const { firstClicked, secondClicked, thirdClicked } = result[0];
+          // Most recent first order
+          response.lastClickedRecipes = [thirdClicked, secondClicked, firstClicked].filter(id => id !== null && id !== undefined);
+        }
+      } finally {
+        await conn.release();
+      }
+    } else {
+      // User not logged in, optionally you could send 401 or just no lastClickedRecipes
+      // return res.status(401).send("You are not logged in");
+    }
+
+    res.status(200).json(response);
+
+  } catch (err) {
+    console.error("Error in GET /:", err.message);
+    res.status(500).send("Server error while fetching recipes.");
+  }
+});
 
 router.post("/auth/register", async (req, res, next) => {
   try {
@@ -105,4 +147,7 @@ router.post("/auth/logout", (req, res) => {
   req.session.reset();
   res.status(200).send("logout succeeded");
 });
+
+
+
 module.exports = router;

@@ -24,7 +24,17 @@ paths:
   /:
     get:
       tags: [public]
-      summary: Get homepage with 3 random recipes
+      summary: For logged out users, Set homepage with 3 random recipes on the left side where a button refreshes the page with 3 new random recipes, if logged in will see on the right side 3 last seen recipes.
+      operationId: getHomePage
+      responses:
+        '200':
+          description: Home page content with 3 random recipes
+
+
+  /recipes/random:
+    get:
+      tags: [public]
+      summary: Return 3 random recipes
       operationId: getHomePage
       responses:
         '200':
@@ -105,28 +115,7 @@ paths:
           description: A user with the same username already exists.
         
         
-  /recipes:
-    get:
-      summary: Get 3 random recipes for homepage
-      description: Returns 3 random recipes. Used on homepage to display rotating content.
-      operationId: getRandomRecipes
-      tags:
-        - recipes
-      responses:
-        '200':
-          description: 3 random recipe previews
-          content:
-            application/json:
-              schema:
-                type: array
-                minItems: 3
-                maxItems: 3
-                items:
-                  $ref: '#/components/schemas/RecipePreview'
-        '500':
-          description: Server error
-          
-          
+ 
   /recipes/search:
     get:
       tags:
@@ -181,9 +170,9 @@ paths:
           description: Invalid search parameters
   
    
-  /users/family-recipes:
+  /users/familyRecipes:
     get:
-      tags: [family-recipes]
+      tags: [family]
       summary: Get family recipes for a specific user
 
       responses:
@@ -197,7 +186,7 @@ paths:
                   $ref: '#/components/schemas/FamilyRecipe'
 
     post:
-      tags: [family-recipes]
+      tags: [family]
       summary: Add a new family recipe for a user
 
       requestBody:
@@ -210,7 +199,7 @@ paths:
         '201':
           description: Family recipe created
 
-  /users/favorite-recipes:
+  /users/favoriteRecipes:
     get:
       tags: [recipes]
       summary: Get user's favorite recipes
@@ -225,32 +214,87 @@ paths:
                 items:
                   $ref: '#/components/schemas/RecipePreview'
 
+  /users/favoriteRecipes/{recipeId}:         
     post:
-      tags: [recipes]
+      tags:
+        - recipes
       summary: Add a recipe to user's favorites
+      parameters:
+        - name: recipeId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the recipe to add
+      responses:
+        '200':
+          description: Recipe marked as favorite successfully
+        '401':
+          description: User not logged in
+        '404':
+          description: Recipe not found locally or in Spoonacular
+        '500':
+          description: Server error
+      security:
+        - sessionAuth: []
+
+    delete:
+      tags: [recipes]
+      summary: Remove a recipe from user's favorites
+      parameters:
+        - name: recipeId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the recipe to delete
+      responses:
+        '200':
+          description: Recipe removed from favorites
+
+  /users/last:
+    get:
+      summary: Get last 3 viewed recipe IDs
+      tags:
+        - Recipes
+      responses:
+        '200':
+          description: A list of up to 3 last viewed recipe IDs (most recent first)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example: ["abc123", "def456", "ghi789"]
+        '401':
+          description: User not logged in
+        '500':
+          description: Server error while fetching recipes
+
+
+  /users/clickOnRecipe:
+    post:
+      summary: Add last clicked recipe (max 3)
+      tags:
+        - Recipes
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [recipe_id]
+              required:
+                - recipeId
               properties:
-                recipe_id:
+                recipeId:
                   type: string
-                  format: uuid
+                  example: "12345"
       responses:
         '200':
-          description: Recipe added to favorites
-
-    delete:
-      tags: [recipes]
-      summary: Remove a recipe from user's favorites
-
-      responses:
-        '200':
-          description: Recipe removed from favorites
-          
+          description: Click saved successfully
+        '500':
+          description: Server error while saving click
   
   /auth/register:
     post:
@@ -442,8 +486,6 @@ components:
         - vegetarian
         - vegan
         - gluten_free
-        - clicked_by_user
-        - saved_by_user
         - ingredients
         - instructions
         - amount_of_meals

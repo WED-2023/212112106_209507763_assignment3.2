@@ -1,16 +1,33 @@
 const DButils = require("./DButils");
-
-async function markAsFavorite(username, recipe_id){
-    await DButils.execQuery(`INTRO INTRO favorite_recipes VALUES ('${username}',${recipe_id})`);
-}
+const MySql = require("../utils/MySql");
+// async function markAsFavorite(username, recipe_id){
+//     await DButils.execQuery(`INTRO INTRO favorite_recipes VALUES ('${username}',${recipe_id})`);
+// }
 
 async function getFavoriteRecipes(username){
     const recipes_id = await DButils.execQuery(`SELECT recipe_id FROM favorite_recipes WHERE username='${username}'`);
     return recipes_id;
 }
 //by ABED
-async function removeFavoriteRecipe(username, recipeId){
-    await DButils.execQuery(`DELETE FROM favorite_recipes WHERE username='${username}' and recipeId=${recipeId}`);
+// async function removeFavoriteRecipe(username, recipe_id){
+//     await DButils.execQuery(`DELETE FROM favorite_recipes WHERE username='${username}' and recipe_id=${recipe_id}`);
+// }
+async function removeFavoriteRecipe(username, recipe_id){
+    let conn;
+    try{
+
+    conn = await MySql.connection();
+     await conn.query(
+        `DELETE FROM favorite_recipes WHERE username='${username}' and recipe_id='${recipe_id}`,
+        [username, recipeId]
+      );
+      await conn.query("COMMIT"); //Commit changes in DB
+     } 
+     catch (err) {
+        return res.status(404).send("cant remove recipe from  myfavorites");
+      }finally {
+    if (conn) await conn.release();
+  }
 }
 
 
@@ -71,7 +88,6 @@ module.exports = {
   getMyRecipes,
   getFamilyRecipes,
   getFavoriteRecipes,
-  markAsFavorite,
   getAllCountries,
   removeFavoriteRecipe
 };
@@ -157,10 +173,52 @@ async function addMyFamilyRecipe(username, recipeData) {
   }
 }
 
+
+async function saveLastClick(username, recipeId) {
+  let conn;
+  try {
+    //conn = await connection();
+    conn = await MySql.connection();
+    // Step 1: Check if user already has a row in lastClicks
+    const existing = await conn.query(
+      "SELECT * FROM lastClicks WHERE username = ?",
+      [username]
+    );
+
+    if (existing.length === 0) {
+      // First time click – insert new row
+      await conn.query(
+        "INSERT INTO lastClicks (username, thirdClicked) VALUES (?, ?)",
+        [username, recipeId]
+      );
+      await conn.query("COMMIT"); //Commit changes in DB
+    } else {
+      const { firstClicked, secondClicked, thirdClicked } = existing[0];
+
+      // Shift clicks to the left and add new to thirdClicked
+      const updatedFirst = secondClicked;
+      const updatedSecond = thirdClicked;
+      const updatedThird = recipeId;
+
+      await conn.query(
+        `UPDATE lastClicks
+         SET firstClicked = ?, secondClicked = ?, thirdClicked = ?
+         WHERE username = ?`,
+        [updatedFirst, updatedSecond, updatedThird, username]
+      );
+      await conn.query("COMMIT"); //Commit changes in DB
+    }
+  } catch (err) {
+    console.error("Error saving last clicked recipe:", err.message);
+    throw err;
+  } finally {
+    if (conn) await conn.release();
+  }
+}
 //by ABED
 
 
-exports.markAsFavorite = markAsFavorite;
+
 exports.getFavoriteRecipes = getFavoriteRecipes;
 exports.getUserDetails = getUserDetails;
 exports.getMyRecipes = getMyRecipes;
@@ -168,3 +226,4 @@ exports.getFamilyRecipes = getFamilyRecipes;
 exports.getAllCountries = getAllCountries;
 exports.removeFavoriteRecipe = removeFavoriteRecipe;
 exports.addMyFamilyRecipe = addMyFamilyRecipe;
+exports.saveLastClick = saveLastClick;
