@@ -124,10 +124,10 @@ router.post("/favoriteRecipes/:recipeId", async (req, res) => {
 
 
 
-router.delete('/favoriteRecipes', async (req,res,next) => {
+router.delete('/favoriteRecipes/:recipeId', async (req,res,next) => {
   try{
     const username = req.session.username;
-    const recipeId = req.body.recipeId;
+    const recipeId = req.params.recipeId;
     await user_utils.removeFavoriteRecipe(username,recipeId);
     res.status(200).send("The Recipe successfully removed from favorites");
   } catch(error){
@@ -159,21 +159,52 @@ router.get('/favoriteRecipes', async (req, res, next) => {
     const username = req.session.username;
     if (!username) return res.status(401).send("User not logged in");
 
-    // Get favorite recipe IDs for this user
+    // Step 1: Get favorite recipe IDs
     const recipes_id = await user_utils.getFavoriteRecipes(username);
-
-    // Extract recipe_id into an array
     const recipes_id_array = recipes_id.map(el => el.recipe_id);
 
-    // Fetch each recipe by id using your existing search function
-    // Assuming recipe_utils.getRecipeById exists and returns recipe or null
-    const recipePromises = recipes_id_array.map(id => recipe_utils.getRecipeById(id));
-    const results = await Promise.all(recipePromises);
+    // Step 2: Get user's personal recipes (for fallback)
+    const myRecipes = await user_utils.getMyRecipes(req);
 
-    // Filter out any null/undefined if recipe not found
-    const foundRecipes = results.filter(r => r);
+    // Step 3: Try Spoonacular first
+    const recipeResults = await Promise.allSettled(
+      recipes_id_array.map(id =>
+        recipe_utils.spoonacularGet(`/recipes/${id}/information`)
+      )
+    );
 
-    res.status(200).send(foundRecipes);
+    // Step 4: Build final result set
+    const combinedRecipes = recipes_id_array.map((id, index) => {
+      const result = recipeResults[index];
+
+      if (result.status === 'fulfilled') {
+        return result.value;
+      }
+
+      // Fallback to user's own recipes
+      const localMatch = myRecipes.find(r => r.recipe_id === parseInt(id));
+      if (localMatch) {
+        return {
+          id: localMatch.recipe_id,
+          title: localMatch.title,
+          image: localMatch.image,
+          readyInMinutes: localMatch.readyInMinutes,
+          vegan: localMatch.vegan,
+          vegetarian: localMatch.vegetarian,
+          glutenFree: localMatch.glutenFree,
+          // Add other fields from your schema if needed
+          source: "local"
+        };
+      }
+
+      // If not found anywhere, return null
+      return null;
+    });
+
+    // Step 5: Remove nulls
+    const foundRecipes = combinedRecipes.filter(r => r !== null);
+
+    res.status(200).json(foundRecipes);
   } catch (error) {
     next(error);
   }
@@ -236,14 +267,60 @@ router.get("/last", async (req, res, next) => {
 
 //add last recipe clicked until a max of 3
 router.post("/clickOnRecipe", async (req, res, next) => {
+  let conn;
   try {
+    
     const username = req.session.username;
     const recipeId = req.body.recipeId;
-  
-    await saveLastClick(username, recipeId);
+    conn = await mySql.connection();
+    console.log("[DEBUG] /clickOnRecipe called");
+    console.log("[DEBUG] Session username:", username);
+    console.log("[DEBUG] Received recipeId:", recipeId);
+      // 1) Check in myrecipes
+    myRecipesRes = await conn.query(
+      "SELECT recipe_id FROM myrecipes WHERE recipe_id = ? AND username = ?",
+      [recipeId, username]
+    );
+
+    // 2) Check in familyrecipes if not found in myrecipes
+    let foundLocally = myRecipesRes.length > 0;
+    if (!foundLocally) {
+        familyRecipesRes = await conn.query(
+        "SELECT recipe_id FROM familyrecipes WHERE recipe_id = ? AND username = ?",
+        [recipeId, username]
+      );
+      foundLocally = familyRecipesRes.length > 0;
+    }
+
+    // 3) If not found locally, check Spoonacular API
+    if (!foundLocally) {
+      try {
+        const apiRes = await recipes_utils.spoonacularGet(`/recipes/${recipeId}/information`);
+        if (!apiRes || apiRes.status === 404) {
+          return res.status(404).send("Recipe not found locally or in Spoonacular");
+        }
+        // recipe found in Spoonacular, proceed
+      } catch (err) {
+        return res.status(404).send("Recipe not found locally or in Spoonacular");
+      }
+    }
+    if (!username) {
+      console.warn("[WARN] Missing username in session");
+      return res.status(401).send("Unauthorized: No session username found.");
+    }
+
+    if (!recipeId) {
+      console.warn("[WARN] No recipeId provided in request body");
+      return res.status(400).send("Bad Request: recipeId is required.");
+    }
+
+    const result = await user_utils.saveLastClick(username, recipeId);
+    console.log("[DEBUG] saveLastClick result:", result);
+    res.status(200).send({ message: "Recipe click registered." });
     // Fetch recipe preview from DB or Spoonacular here...
   } catch (err) {
-    res.status(500).send("Server error while fetching recipes.");
+        console.error("[ERROR] Exception in /clickOnRecipe:", err);
+        res.status(500).send("Server error while fetching recipes.");
   }
 });
 

@@ -14,17 +14,19 @@ async function getFavoriteRecipes(username){
 // }
 async function removeFavoriteRecipe(username, recipe_id){
     let conn;
+    let res;
     try{
 
     conn = await MySql.connection();
      await conn.query(
-        `DELETE FROM favorite_recipes WHERE username='${username}' and recipe_id='${recipe_id}`,
-        [username, recipeId]
+        `DELETE FROM favorite_recipes WHERE username = ? AND recipe_id = ?`,
+        [username, recipe_id]
       );
-      await conn.query("COMMIT"); //Commit changes in DB
+      res = await conn.query("COMMIT"); //Commit changes in DB
      } 
      catch (err) {
-        return res.status(404).send("cant remove recipe from  myfavorites");
+        // return res.status(404).send("cant remove recipe from  myfavorites");
+            throw err;
       }finally {
     if (conn) await conn.release();
   }
@@ -83,15 +85,7 @@ async function getAllCountries() {
 }
 
 
-module.exports = {
-  getUserDetails,
-  getMyRecipes,
-  getFamilyRecipes,
-  getFavoriteRecipes,
-  getAllCountries,
-  removeFavoriteRecipe
-};
-""
+
 
 
 
@@ -194,7 +188,16 @@ async function saveLastClick(username, recipeId) {
       await conn.query("COMMIT"); //Commit changes in DB
     } else {
       const { firstClicked, secondClicked, thirdClicked } = existing[0];
-
+      
+         // Step 2: Check for duplicates
+      if (
+        recipeId === firstClicked ||
+        recipeId === secondClicked ||
+        recipeId === thirdClicked
+      ) {
+        console.log(`[DEBUG] Skipping duplicate recipe click: ${recipeId}`);
+        return; // Skip if already clicked
+      }
       // Shift clicks to the left and add new to thirdClicked
       const updatedFirst = secondClicked;
       const updatedSecond = thirdClicked;
@@ -227,3 +230,4 @@ exports.getAllCountries = getAllCountries;
 exports.removeFavoriteRecipe = removeFavoriteRecipe;
 exports.addMyFamilyRecipe = addMyFamilyRecipe;
 exports.saveLastClick = saveLastClick;
+
