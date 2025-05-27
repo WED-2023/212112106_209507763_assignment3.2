@@ -1,11 +1,23 @@
 const DButils = require("./DButils");
 const MySql = require("../utils/MySql");
 
+
+
+/**
+ * Return user's favorite recipes
+ * @param {string} username 
+ */
 async function getFavoriteRecipes(username){
     const recipes_id = await DButils.execQuery(`SELECT recipe_id FROM favorite_recipes WHERE username='${username}'`);
     return recipes_id;
 }
 
+
+/**
+ * Remove user's favorite recipe based on ID
+ * @param {string} username 
+ * @param {integer} recipe_id 
+ */
 async function removeFavoriteRecipe(username, recipe_id){
     let conn;
     let res;
@@ -40,7 +52,10 @@ async function getUserDetails(username) {
   }
 }
 
-
+/**
+ * Return user's family recipes
+ * @param {string} username 
+ */
 async function getFamilyRecipes(username){
     try {
      // const username = req.session.username;
@@ -51,6 +66,12 @@ async function getFamilyRecipes(username){
     throw error;
   }
 }
+
+
+/**
+ * return user's recipes
+ * @param {string} req 
+ */
 async function getMyRecipes(req) {
   try{
       const username = req.session.username;
@@ -79,7 +100,7 @@ async function getAllCountries() {
 }
 
 
- /* Add a new family recipe (base in MyRecipes, details in FamilyRecipes)
+ /** Add a new family recipe (base in MyRecipes, details in FamilyRecipes)
  * @param {string} username 
  * @param {object} recipeData 
  */
@@ -134,6 +155,11 @@ async function addFamilyRecipe(username, recipeData) {
 }
 
 
+/**
+ * Saves last clicked recipe ID of user
+ * @param {string} username 
+ * @param {integer} recipeID 
+ */
 async function saveLastClick(username, recipeId) {
   let conn;
   try {

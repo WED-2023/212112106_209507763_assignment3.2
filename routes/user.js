@@ -10,7 +10,6 @@ const { addMyFamilyRecipe } = require("./utils/user_utils");
  * Authenticate all incoming requests by middleware
  * user_id --> username
  */ 
-
 router.use(async function (req, res, next) {
   if (req.session && req.session.username) {
     DButils.execQuery("SELECT username FROM users").then((users) => {
@@ -24,7 +23,135 @@ router.use(async function (req, res, next) {
   }
 });
 
+//=================== GET ===================
 
+/**
+ * Return the users Favorite Recipes
+ */
+router.get('/favoriteRecipes', async (req, res, next) => {
+  try {
+    const username = req.session?.username;
+    if (!username) return res.status(401).send("User not logged in");
+
+    // Get favorite recipe IDs
+    const recipes = await user_utils.getFavoriteRecipes(username);
+
+    // Map to plain array of IDs
+    const recipeIds = recipes.map(row => row.recipe_id);
+
+    res.status(200).json(recipeIds); // Return as JSON array
+  } catch (error) {
+    console.error("Error in /favoriteRecipes:", error);
+    next(error);
+  }
+});
+
+
+/**
+ * Return the users recipes
+ */
+router.get('/users/myRecipes', async (req, res, next) => {
+  try {
+    const results = await user_utils.getMyRecipes(req); 
+    res.status(200).send(results);
+  } catch (error) {
+    next(error);
+  }
+});
+
+
+/**
+ * Get user details by username
+ */
+router.get("/:username", async (req, res, next) => {
+  try {
+    const user = await user_utils.getUserDetails(req.params.username);
+    if (!user) {
+      res.status(404).send({ message: "User not found" });
+    } else {
+      res.send(user);
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * Check if a username is already taken
+ */
+router.get("/exists/:username", async (req, res, next) => {
+  try {
+    const exists = await user_utils.isUsernameTaken(req.params.username);
+    res.send({ exists });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * Get the user's Family Recipes
+ */
+router.get('/familyRecipes', async (req,res,next) => {
+  try{
+    const username = req.session?.username;
+    let favorite_recipes = {};
+    const familyRecipes = await user_utils.getFamilyRecipes(username);
+    // Return full recipe objects as JSON
+    res.status(200).json(familyRecipes);
+  } catch(error){
+    next(error); 
+  }
+});
+
+
+/**
+ * Get the user's 3 last viewed recipes
+ */
+router.get("/last", async (req, res, next) => {
+  let conn;
+  try {
+    const username = req.session.username;
+    if (!username) {
+      return res.status(401).send("User not logged in.");
+    }
+
+    //conn = await connection();
+    conn = await mySql.connection();
+    // Fetch lastClicks row for this user
+    const result = await conn.query(
+      "SELECT firstClicked, secondClicked, thirdClicked FROM lastClicks WHERE username = ?",
+      [username]
+    );
+
+    if (result.length === 0) {
+      // No record yet for this user
+      return res.status(200).json([]);
+    }
+
+    const { firstClicked, secondClicked, thirdClicked } = result[0];
+
+    // Return in order: most recent first
+    const clicked = [thirdClicked, secondClicked, firstClicked].filter(
+      (id) => id !== null && id !== undefined
+    );
+
+    res.status(200).json(clicked);
+  } catch (err) {
+    console.error("Error retrieving last viewed recipes:", err.message);
+    res.status(500).send("Server error while fetching recipes.");
+  } finally {
+    if (conn) await conn.release();
+  }
+});
+
+//=================== END GET ===================
+
+
+//=================== POST ===================
+
+/**
+ * Mark a recipe as a favorite
+ */
 router.post("/favoriteRecipes/:recipeId", async (req, res) => {
   const username = req.session?.username;
   const recipeId = req.params.recipeId;
@@ -110,97 +237,12 @@ router.post("/favoriteRecipes/:recipeId", async (req, res) => {
   }
 });
 
-//BY ABED
-router.delete('/favoriteRecipes/:recipeId', async (req,res,next) => {
-  try{
-    const username = req.session.username;
-    const recipeId = req.params.recipeId;
-    await user_utils.removeFavoriteRecipe(username,recipeId);
-    res.status(200).send("The Recipe successfully removed from favorites");
-  } catch(error){
-    console.error("Error message:", error.message);
-    console.error("Stack trace:", error.stack);
-    next(error);
-  }
-});
-// BY ABED
 
 
 
-
-router.get('/favoriteRecipes', async (req, res, next) => {
-  try {
-    const username = req.session?.username;
-    if (!username) return res.status(401).send("User not logged in");
-
-    // Get favorite recipe IDs
-    const recipes = await user_utils.getFavoriteRecipes(username);
-
-    // Map to plain array of IDs
-    const recipeIds = recipes.map(row => row.recipe_id);
-
-    res.status(200).json(recipeIds); // Return as JSON array
-  } catch (error) {
-    console.error("Error in /favoriteRecipes:", error);
-    next(error);
-  }
-});
-
-
-
-//BY ABED
-router.get('/familyRecipes', async (req,res,next) => {
-  try{
-    const username = req.session?.username;
-    let favorite_recipes = {};
-    const familyRecipes = await user_utils.getFamilyRecipes(username);
-    // Return full recipe objects as JSON
-    res.status(200).json(familyRecipes);
-  } catch(error){
-    next(error); 
-  }
-});
-
-
-//last 3 viewed recipes IDS (/clickOnRecipe adds a recipe to the clicked list)
-router.get("/last", async (req, res, next) => {
-  let conn;
-  try {
-    const username = req.session.username;
-    if (!username) {
-      return res.status(401).send("User not logged in.");
-    }
-
-    //conn = await connection();
-    conn = await mySql.connection();
-    // Fetch lastClicks row for this user
-    const result = await conn.query(
-      "SELECT firstClicked, secondClicked, thirdClicked FROM lastClicks WHERE username = ?",
-      [username]
-    );
-
-    if (result.length === 0) {
-      // No record yet for this user
-      return res.status(200).json([]);
-    }
-
-    const { firstClicked, secondClicked, thirdClicked } = result[0];
-
-    // Return in order: most recent first
-    const clicked = [thirdClicked, secondClicked, firstClicked].filter(
-      (id) => id !== null && id !== undefined
-    );
-
-    res.status(200).json(clicked);
-  } catch (err) {
-    console.error("Error retrieving last viewed recipes:", err.message);
-    res.status(500).send("Server error while fetching recipes.");
-  } finally {
-    if (conn) await conn.release();
-  }
-});
-
-//add last recipe clicked until a max of 3
+/**
+ * Add last recipe clicked into the database until a max of 3
+ */
 router.post("/clickOnRecipe", async (req, res, next) => {
   let conn;
   try {
@@ -263,7 +305,9 @@ router.post("/clickOnRecipe", async (req, res, next) => {
 
 
 
-
+/**
+ * Add a family recipe
+ */
 router.post("/familyRecipes", async (req, res, next) => {
   const username = req.session.username;
   try {
@@ -315,7 +359,6 @@ router.post("/familyRecipes", async (req, res, next) => {
       extendedIngredients
     });
 
-    // await addMyFamilyRecipe(username, recipeData);
     res.status(201).send({ message: "Family recipe added successfully" });
 
   } catch (err) {
@@ -323,47 +366,28 @@ router.post("/familyRecipes", async (req, res, next) => {
   }
 });
 
+//=================== END POST ===================
 
-router.get('/users/myRecipes', async (req, res, next) => {
-  try {
-    const results = await user_utils.getMyRecipes(req); 
-    res.status(200).send(results);
-  } catch (error) {
-    next(error);
-  }
-});
+
+
+//=================== DELETE ===================
 
 
 /**
- * Get user details by username
+ * Un-mark (remove) a favorite recipe by recipeId
  */
-router.get("/:username", async (req, res, next) => {
-  try {
-    const user = await user_utils.getUserDetails(req.params.username);
-    if (!user) {
-      res.status(404).send({ message: "User not found" });
-    } else {
-      res.send(user);
-    }
-  } catch (error) {
+router.delete('/favoriteRecipes/:recipeId', async (req,res,next) => {
+  try{
+    const username = req.session.username;
+    const recipeId = req.params.recipeId;
+    await user_utils.removeFavoriteRecipe(username,recipeId);
+    res.status(200).send("The Recipe successfully removed from favorites");
+  } catch(error){
+    console.error("Error message:", error.message);
+    console.error("Stack trace:", error.stack);
     next(error);
   }
 });
-
-/**
- * Check if a username is already taken
- */
-router.get("/exists/:username", async (req, res, next) => {
-  try {
-    const exists = await user_utils.isUsernameTaken(req.params.username);
-    res.send({ exists });
-  } catch (error) {
-    next(error);
-  }
-});
-
-
-//by ABED
-
+//=================== END DELETE ===================
 
 module.exports = router;
