@@ -6,6 +6,7 @@
 - Abed Showgan - 212112106  
 - Michael Goldfrab - 209507763  
 
+- **NOTE:** We did not upload our .env key as that is sensitive information, please contact us if needed at showganabed@gmail.com
 This repository contains the backend server implementation for Assignment 3.2  
 in the course "Internet Development 2025". The backend is built using Node.js and Express.
 
