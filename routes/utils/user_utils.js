@@ -1,17 +1,11 @@
 const DButils = require("./DButils");
 const MySql = require("../utils/MySql");
-// async function markAsFavorite(username, recipe_id){
-//     await DButils.execQuery(`INTRO INTRO favorite_recipes VALUES ('${username}',${recipe_id})`);
-// }
 
 async function getFavoriteRecipes(username){
     const recipes_id = await DButils.execQuery(`SELECT recipe_id FROM favorite_recipes WHERE username='${username}'`);
     return recipes_id;
 }
-//by ABED
-// async function removeFavoriteRecipe(username, recipe_id){
-//     await DButils.execQuery(`DELETE FROM favorite_recipes WHERE username='${username}' and recipe_id=${recipe_id}`);
-// }
+
 async function removeFavoriteRecipe(username, recipe_id){
     let conn;
     let res;
@@ -47,10 +41,10 @@ async function getUserDetails(username) {
 }
 
 
-async function getFamilyRecipes(req){
+async function getFamilyRecipes(username){
     try {
-      const username = req.session.username;
-      const recipes = await DButils.execQuery(`SELECT * FROM familyrecipes WHERE username = '${username}`);
+     // const username = req.session.username;
+      const recipes = await DButils.execQuery(`SELECT * FROM familyrecipes WHERE username = '${username}'`);
       return recipes;
     }
     catch (error) {
@@ -85,17 +79,14 @@ async function getAllCountries() {
 }
 
 
-
-
-
-
  /* Add a new family recipe (base in MyRecipes, details in FamilyRecipes)
  * @param {string} username 
  * @param {object} recipeData 
  */
-async function addMyFamilyRecipe(username, recipeData) {
+async function addFamilyRecipe(username, recipeData) {
   try {
     const {
+      recipe_id,
       recipe_title,
       recipe_image,
       prep_duration,
@@ -109,40 +100,14 @@ async function addMyFamilyRecipe(username, recipeData) {
       recipe_season
     } = recipeData;
 
-    // Step 1: Insert into MyRecipes
-    const insertMyRecipeQuery = `
-      INSERT INTO MyRecipes (
-        username, recipe_title, recipe_image, prep_duration, vegetarian, vegan, gluten_free, amount_of_meals, instructions, extendedIngredients
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-    const result = await DButils.execQuery({
-      sql: insertMyRecipeQuery,
-      values: [
-        username,
-        recipe_title,
-        recipe_image,
-        prep_duration,
-        vegetarian,
-        vegan,
-        gluten_free,
-        amount_of_meals,
-        recipe_instructions,
-        JSON.stringify(extendedIngredients)
-      ],
-      returnLastInsertId: true
-    });
-
-    const recipe_id = result.insertId;
-
     // Step 2: Insert into FamilyRecipes
     const insertFamilyQuery = `
       INSERT INTO FamilyRecipes (
         recipe_id, username, recipe_author, recipe_season, extendedIngredients,
         recipe_instructions, recipe_title, recipe_image, prep_duration,
-        vegetarian, vegan, gluten_free
+        vegetarian, vegan, gluten_free, amount_of_meals
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     await DButils.execQuery({
       sql: insertFamilyQuery,
@@ -158,7 +123,8 @@ async function addMyFamilyRecipe(username, recipeData) {
         prep_duration,
         vegetarian,
         vegan,
-        gluten_free
+        gluten_free,
+        amount_of_meals
       ]
     });
 
@@ -218,16 +184,14 @@ async function saveLastClick(username, recipeId) {
     if (conn) await conn.release();
   }
 }
-//by ABED
 
-
-
+//################### EXPORTS ################################
 exports.getFavoriteRecipes = getFavoriteRecipes;
 exports.getUserDetails = getUserDetails;
 exports.getMyRecipes = getMyRecipes;
 exports.getFamilyRecipes = getFamilyRecipes;
 exports.getAllCountries = getAllCountries;
 exports.removeFavoriteRecipe = removeFavoriteRecipe;
-exports.addMyFamilyRecipe = addMyFamilyRecipe;
+exports.addFamilyRecipe = addFamilyRecipe;
 exports.saveLastClick = saveLastClick;
 

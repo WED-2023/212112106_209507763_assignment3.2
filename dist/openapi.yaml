@@ -550,18 +550,75 @@ components:
 
     FamilyRecipe:
       type: object
-      required: [recipe_author, recipe_season, recipe_ingredients, recipe_instructions]
+      required:
+        - recipe_id
+        - recipe_title
+        - recipe_image
+        - prep_duration
+        - vegetarian
+        - vegan
+        - gluten_free
+        - amount_of_meals
+        - instructions
+        - extendedIngredients
+        - recipe_author
+        - recipe_season
+        - recipe_ingredients
+        - recipe_instructions
       properties:
-        recipe_author:
-          type: string
-        recipe_season:
-          type: string
-        recipe_ingredients:
-          type: array
-          items:
+          recipe_id:
+            type: int
+            example: 102
+          recipe_title:
             type: string
-        recipe_instructions:
-          type: string
+            example: My New Recipe
+          recipe_image:
+             type: string
+             format: uri
+             example: https://example.com/image.jpg
+          prep_duration:
+            type: string
+            example: 30
+          vegetarian:
+            type: boolean
+          vegan:
+            type: boolean
+          gluten_free:
+            type: boolean
+          amount_of_meals:
+            type: integer
+            example: 4
+          instructions:
+              type: string
+              example: |
+                1. Chop onions
+                2. Fry with oil
+                3. Add spices
+                4. Serve
+          extendedIngredients:
+              type: array
+              description: List of ingredients and their amounts
+              items:
+                type: object
+                required: [ name, amount ]
+                properties:
+                  name:
+                    type: string
+                    example: Onion
+                  amount:
+                    type: string
+                    example: 1 large
+
+          recipe_author:
+              type: string
+          recipe_season:
+              type: string
+          recipe_ingredients:
+              type: array
+              items:
+                type: string
+          recipe_instructions:
+            type: string
 
 
     RecipePreview:

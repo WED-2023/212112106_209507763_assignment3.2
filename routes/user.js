@@ -4,7 +4,7 @@ const DButils = require("./utils/DButils");
 const user_utils = require("./utils/user_utils");
 const recipe_utils = require("./utils/recipes_utils");
 const mySql = require("../routes/utils/MySql");
-
+const { addMyFamilyRecipe } = require("./utils/user_utils");
 
 /**
  * Authenticate all incoming requests by middleware
@@ -25,41 +25,16 @@ router.use(async function (req, res, next) {
 });
 
 
-/**
- * This path gets body with recipeId and save this recipe in the favorites list of the logged-in user
- */
-// router.post('/favoriteRecipes', async (req,res,next) => {
-//   try{
-//     console.log("[POST] /users/favoriteRecipes - Incoming request");
-//     const user_id = req.session.user_id;
-//     const recipe_id = req.body.recipeId;
-//     console.log(`Session user_id: ${user_id}`);
-//     console.log(`Request body recipeId: ${recipe_id}`);
-//     if (!user_id) {
-//       console.warn("No user_id found in session.");
-//       return res.status(401).send("User not logged in.");
-//     }
-
-//     if (!recipe_id) {
-//       console.warn("No recipeId provided in request body.");
-//       return res.status(400).send("Missing recipeId.");
-//     }
-//     await user_utils.markAsFavorite(user_id,recipe_id);
-//     console.log(`Recipe ${recipe_id} successfully marked as favorite for user ${user_id}`);
-//     res.status(200).send("The Recipe successfully saved as favorite");
-//     } catch(error){
-//     console.error("Error in /users/favoriteRecipes:", error);
-//     next(error);
-//   }
-// })
-
 router.post("/favoriteRecipes/:recipeId", async (req, res) => {
   const username = req.session?.username;
   const recipeId = req.params.recipeId;
+  console.log(`\n[INFO] Incoming favorite mark request for recipe ID: ${recipeId} by user: ${username}`);
 
   if (!username) {
+    console.warn("[WARN] No username in session");
     return res.status(401).send("User not logged in");
   }
+
   let myRecipesRes;
   let familyRecipesRes;
   let favCheck;
@@ -72,7 +47,7 @@ router.post("/favoriteRecipes/:recipeId", async (req, res) => {
       "SELECT recipe_id FROM myrecipes WHERE recipe_id = ? AND username = ?",
       [recipeId, username]
     );
-
+    console.log(`[DB] myRecipes match count: ${myRecipesRes.length}`);
     // 2) Check in familyrecipes if not found in myrecipes
     let foundLocally = myRecipesRes.length > 0;
     if (!foundLocally) {
@@ -80,18 +55,28 @@ router.post("/favoriteRecipes/:recipeId", async (req, res) => {
         "SELECT recipe_id FROM familyrecipes WHERE recipe_id = ? AND username = ?",
         [recipeId, username]
       );
+      console.log(`[DB] familyRecipes match count: ${familyRecipesRes.length}`);
       foundLocally = familyRecipesRes.length > 0;
     }
+         
 
     // 3) If not found locally, check Spoonacular API
     if (!foundLocally) {
+    
       try {
-        const apiRes = await recipes_utils.spoonacularGet(`/recipes/${recipeId}/information`);
-        if (!apiRes || apiRes.status === 404) {
+        console.log("[INFO] Recipe not found locally. Trying Spoonacular API...");
+        const apiRes = await recipe_utils.spoonacularGet(`/${recipeId}/information`, {
+            includeNutrition: false
+          });
+          console.log("[SPOONACULAR] API response received");
+
+        if (!apiRes || apiRes.status === 404 || !apiRes.id) {
+          console.warn("[SPOONACULAR] Recipe not found or bad response");
           return res.status(404).send("Recipe not found locally or in Spoonacular");
         }
         // recipe found in Spoonacular, proceed
       } catch (err) {
+        console.error("[SPOONACULAR] API Error:", err.message);
         return res.status(404).send("Recipe not found locally or in Spoonacular");
       }
     }
@@ -101,6 +86,7 @@ router.post("/favoriteRecipes/:recipeId", async (req, res) => {
       "SELECT * FROM favorite_recipes WHERE username = ? AND recipe_id = ?",
       [username, recipeId]
     );
+    console.log(`[DB] favorite_recipes match count: ${favCheck.length}`);
 
     if (favCheck.length === 0) {
       await conn.query(
@@ -108,6 +94,10 @@ router.post("/favoriteRecipes/:recipeId", async (req, res) => {
         [username, recipeId]
       );
       await conn.query("COMMIT"); //Commit changes in DB
+      console.log("[DB] Inserted into favorite_recipes");
+    }
+    else{
+        console.log("[INFO] Recipe already marked as favorite");
     }
 
     res.status(200).send("Recipe marked as favorite");
@@ -121,9 +111,6 @@ router.post("/favoriteRecipes/:recipeId", async (req, res) => {
 });
 
 //BY ABED
-
-
-
 router.delete('/favoriteRecipes/:recipeId', async (req,res,next) => {
   try{
     const username = req.session.username;
@@ -138,93 +125,41 @@ router.delete('/favoriteRecipes/:recipeId', async (req,res,next) => {
 });
 // BY ABED
 
-/**
- * This path returns the favorites recipes that were saved by the logged-in user
- */
-// router.get('/favoriteRecipes', async (req,res,next) => {
-//   try{
-//     const username = req.session.username;
-//     let favorite_recipes = {};
-//     const recipes_id = await user_utils.getFavoriteRecipes(username);
-//     let recipes_id_array = [];
-//     recipes_id.map((element) => recipes_id_array.push(element.recipe_id)); //extracting the recipe ids into array
-//     const results = await recipe_utils.extractRecipePreview(recipes_id_array); //change this. search using /recipes/{recipeId} , router.get("/:recipeId", async (req, res) 
-//     res.status(200).send(results);
-//   } catch(error){
-//     next(error); 
-//   }
-// });
+
+
+
 router.get('/favoriteRecipes', async (req, res, next) => {
   try {
-    const username = req.session.username;
+    const username = req.session?.username;
     if (!username) return res.status(401).send("User not logged in");
 
-    // Step 1: Get favorite recipe IDs
-    const recipes_id = await user_utils.getFavoriteRecipes(username);
-    const recipes_id_array = recipes_id.map(el => el.recipe_id);
+    // Get favorite recipe IDs
+    const recipes = await user_utils.getFavoriteRecipes(username);
 
-    // Step 2: Get user's personal recipes (for fallback)
-    const myRecipes = await user_utils.getMyRecipes(req);
+    // Map to plain array of IDs
+    const recipeIds = recipes.map(row => row.recipe_id);
 
-    // Step 3: Try Spoonacular first
-    const recipeResults = await Promise.allSettled(
-      recipes_id_array.map(id =>
-        recipe_utils.spoonacularGet(`/recipes/${id}/information`)
-      )
-    );
-
-    // Step 4: Build final result set
-    const combinedRecipes = recipes_id_array.map((id, index) => {
-      const result = recipeResults[index];
-
-      if (result.status === 'fulfilled') {
-        return result.value;
-      }
-
-      // Fallback to user's own recipes
-      const localMatch = myRecipes.find(r => r.recipe_id === parseInt(id));
-      if (localMatch) {
-        return {
-          id: localMatch.recipe_id,
-          title: localMatch.title,
-          image: localMatch.image,
-          readyInMinutes: localMatch.readyInMinutes,
-          vegan: localMatch.vegan,
-          vegetarian: localMatch.vegetarian,
-          glutenFree: localMatch.glutenFree,
-          // Add other fields from your schema if needed
-          source: "local"
-        };
-      }
-
-      // If not found anywhere, return null
-      return null;
-    });
-
-    // Step 5: Remove nulls
-    const foundRecipes = combinedRecipes.filter(r => r !== null);
-
-    res.status(200).json(foundRecipes);
+    res.status(200).json(recipeIds); // Return as JSON array
   } catch (error) {
+    console.error("Error in /favoriteRecipes:", error);
     next(error);
   }
 });
 
+
+
 //BY ABED
-router.get('/users/familyRecipes', async (req,res,next) => {
+router.get('/familyRecipes', async (req,res,next) => {
   try{
-    const user_id = req.session.user_id;
+    const username = req.session?.username;
     let favorite_recipes = {};
-    const recipes_id = await user_utils(user_id);
-    let recipes_id_array = [];
-    recipes_id.map((element) => recipes_id_array.push(element.recipe_id)); //extracting the recipe ids into array
-    const results = await recipe_utils.getRecipesPreview(recipes_id_array);
-    res.status(200).send(results);
+    const familyRecipes = await user_utils.getFamilyRecipes(username);
+    // Return full recipe objects as JSON
+    res.status(200).json(familyRecipes);
   } catch(error){
     next(error); 
   }
 });
-
 
 
 //last 3 viewed recipes IDS (/clickOnRecipe adds a recipe to the clicked list)
@@ -295,7 +230,9 @@ router.post("/clickOnRecipe", async (req, res, next) => {
     // 3) If not found locally, check Spoonacular API
     if (!foundLocally) {
       try {
-        const apiRes = await recipes_utils.spoonacularGet(`/recipes/${recipeId}/information`);
+          const apiRes = await recipe_utils.spoonacularGet(`/${recipeId}/information`, {
+            includeNutrition: false
+          });
         if (!apiRes || apiRes.status === 404) {
           return res.status(404).send("Recipe not found locally or in Spoonacular");
         }
@@ -327,19 +264,58 @@ router.post("/clickOnRecipe", async (req, res, next) => {
 
 
 
-router.post("/users/familyRecipes", async (req, res, next) => {
+router.post("/familyRecipes", async (req, res, next) => {
+  const username = req.session.username;
   try {
     if (!req.session?.username) {
       return res.status(401).send("Unauthorized");
     }
+    const {
+      recipe_id,
+      recipe_title,
+      recipe_image,
+      recipe_author,
+      recipe_season,
+      prep_duration,
+      vegetarian,
+      vegan,
+      gluten_free,
+      amount_of_meals,
+      recipe_instructions,
+      extendedIngredients
+    } = req.body;
 
-    const recipeData = req.body;
-
-    if (!recipeData.recipe_title || !recipeData.recipe_author || !recipeData.recipe_instructions) {
+    // Basic validation
+    if (
+        !recipe_title || !recipe_image || !prep_duration || !recipe_instructions ||
+        !Array.isArray(extendedIngredients) || extendedIngredients.length === 0 ||
+        typeof vegetarian !== "boolean" || typeof vegan !== "boolean" || typeof gluten_free !== "boolean" ||
+        typeof amount_of_meals !== "number"
+    ) {
+      return res.status(400).send({ message: "Invalid or missing fields in request" });
+    }
+    if (!recipe_title || !recipe_author || !recipe_instructions) {
       return res.status(400).send("Missing required fields: title, author, or instructions");
     }
 
-    await addMyFamilyRecipe(req.session.username, recipeData);
+     // Insert into DB
+    await user_utils.addFamilyRecipe(username, {
+      recipe_id,
+      username,
+      recipe_title,
+      recipe_image,
+      recipe_author,
+      recipe_season,
+      prep_duration,
+      vegetarian,
+      vegan,
+      gluten_free,
+      amount_of_meals,
+      recipe_instructions,
+      extendedIngredients
+    });
+
+    // await addMyFamilyRecipe(username, recipeData);
     res.status(201).send({ message: "Family recipe added successfully" });
 
   } catch (err) {
@@ -356,9 +332,6 @@ router.get('/users/myRecipes', async (req, res, next) => {
     next(error);
   }
 });
-
-
-//by ABED
 
 
 /**

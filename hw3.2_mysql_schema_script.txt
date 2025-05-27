@@ -43,7 +43,7 @@ CREATE TABLE FamilyRecipes (
     vegetarian BOOLEAN,
     vegan BOOLEAN,
     gluten_free BOOLEAN,
-    FOREIGN KEY (recipe_id) REFERENCES MyRecipes(recipe_id) ON DELETE CASCADE,
+    amount_of_meals INT,
     FOREIGN KEY (username) REFERENCES Users(username) ON DELETE CASCADE
 );
 
@@ -53,7 +53,6 @@ CREATE TABLE Favorite_Recipes (
     recipe_id INT NOT NULL,
     PRIMARY KEY (username, recipe_id),
     FOREIGN KEY (username) REFERENCES Users(username) ON DELETE CASCADE,
-    FOREIGN KEY (recipe_id) REFERENCES MyRecipes(recipe_id) ON DELETE CASCADE
 );
 
 
