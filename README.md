@@ -9,6 +9,14 @@
 This repository contains the backend server implementation for Assignment 3.2  
 in the course "Internet Development 2025". The backend is built using Node.js and Express.
 
+**We setup 3 routes:**
+- **/auth:** For login, register and logout purposes
+- **/users:** For Personal Recipe, Favorite Recipe and Family Recipe management, including other functionalities like last clicked recipes.
+- **/recipes:** For creating/deleting recipes (Personal recipes), retrieving random recipes, searching for recipes based on keywords, categories and ID
+
+We have used Spoonacular's API to search recipes, MyRecipes and family recipes are stored in the database (Local MYSQL stored recipes and recipes retrieved fro Spoonacular can be starred as favorite, or recorded as last clicked).  
+
+
 - Link to Github.IO Website: [https://wed-2023.github.io/212112106_209507763_assignment3.2/
 ](https://wed-2023.github.io/212112106_209507763_assignment3.2/)
 ### About the Project  
@@ -19,7 +27,7 @@ and provides JSON responses to the frontend. Key features include:
 
 - Node.js with Express framework  
 - REST API endpoints for data manipulation  
-- Connection and interaction with a database (e.g., MongoDB or MySQL)  
+- Connection and interaction with a database (e.g. MySQL)  
 - Middleware for request parsing, logging, and error handling  
 - Basic authentication and security best practices (if applicable)  
 
@@ -31,7 +39,7 @@ This backend is designed to work seamlessly with the corresponding frontend to d
 1. Clone the repo  
 2. Run `npm install` to install dependencies  
 3. Configure environment variables (e.g., database connection) in `.env` file  
-4. Start the server with `npm start` or `node index.js`  
+4. Start the server with `npm start` or `node main.js`  
 5. The server listens on port 3000 by default (configurable)  
 
 For further details, please refer to the code comments and documentation within the project files.
