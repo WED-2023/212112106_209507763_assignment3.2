@@ -48,6 +48,17 @@ router.get("/", async (req, res) => {
   }
 });
 
+//Added by Abed 19062025
+router.get("/countries", async (req, res, next) => {
+  try {
+    const response = await axios.get("https://restcountries.com/v3.1/all");
+    const countryNames = response.data.map(c => c.name.common).sort();
+    res.json(countryNames);
+  } catch (err) {
+    next(err);
+  }
+});
+//Added by Abed 19062025
 router.post("/auth/register", async (req, res, next) => {
   try {
     const {

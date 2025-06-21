@@ -56,6 +56,16 @@ const user = require("./routes/user");
 const recipes = require("./routes/recipes");
 const auth = require("./routes/auth");
 
+const corsOptions = {
+  origin: 'http://localhost:3001',
+  credentials: true,            // if you need cookies/auth; otherwise omit
+  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'], // adjust if you send custom headers
+};
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // handle preflight for all routes
+
+
 //#region cookie middleware
 app.use(function (req, res, next) {
   if (req.session && req.session.username) {
@@ -97,3 +107,5 @@ process.on("SIGINT", function () {
   }
   process.exit();
 });
+
+
