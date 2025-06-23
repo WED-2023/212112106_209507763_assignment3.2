@@ -107,10 +107,12 @@ router.get('/familyRecipes', async (req,res,next) => {
 /**
  * Get the user's 3 last viewed recipes
  */
-router.get("/last", async (req, res, next) => {
+router.get('/last', async (req, res, next) => {
   let conn;
+  console.log("inside /last")
   try {
-    const username = req.session.username;
+    const username = req.session?.username;
+    console.log("Username in /last: ", username)
     if (!username) {
       return res.status(401).send("User not logged in.");
     }
@@ -139,6 +141,7 @@ router.get("/last", async (req, res, next) => {
   } catch (err) {
     console.error("Error retrieving last viewed recipes:", err.message);
     res.status(500).send("Server error while fetching recipes.");
+    next(err); 
   } finally {
     if (conn) await conn.release();
   }

@@ -11,9 +11,12 @@ const { addMyRecipe } = require("./utils/recipes_utils");
 router.get("/random", async (req, res, next) => {
   try {
     const data = await recipes_utils.spoonacularGet("/random", { number: 3 });
+    console.log("Raw data from Spoonacular:", JSON.stringify(data.recipes, null, 2)); 
     const previews = data.recipes.map(recipe =>
         recipes_utils.extractRecipePreview(recipe)
+        
     );
+  console.log("Preview recipes returned to frontend:", previews); 
     res.status(200).json(previews);
   } catch (err) {
     res.status(500).send("Server error while fetching recipes.");
