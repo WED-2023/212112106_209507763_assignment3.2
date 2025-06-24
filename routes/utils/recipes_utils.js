@@ -32,9 +32,6 @@ async function spoonacularGet(path, params = {}) {
     }
 }
 
-
-
-
 // function extractRecipePreview(recipe, options = {}) {
 //     return {
 //         recipe_image: recipe.image,
@@ -48,34 +45,20 @@ async function spoonacularGet(path, params = {}) {
 // }
 
 //New extract recipe by Abed 24062025
-
-
 function extractRecipePreview(recipe, options = {}) {
     return {
     id: recipe.recipe_id || recipe.id || null, // optional if exists
-    recipe_title: recipe.title,
-    recipe_image: recipe.image,
-    prep_duration: recipe.readyInMinutes,
-    popularity: recipe.aggregateLikes,
+    title: recipe.title,
+    image: recipe.image,
+    readyInMinutes: recipe.readyInMinutes,
+    aggregateLikes: recipe.aggregateLikes,
     vegetarian: recipe.vegetarian,
     vegan: recipe.vegan,
-    gluten_free: recipe.glutenFree
+    glutenFree: recipe.glutenFree
     };
 }
 
 
-// function extractRecipePreview(recipe, options = {}) {
-//   return {
-    // id: recipe.recipe_id || recipe.id || null, // optional if exists
-    // title: recipe.recipe_title,
-    // image: recipe.recipe_image,
-    // readyInMinutes: recipe.prep_duration,
-    // aggregateLikes: recipe.popularity,
-    // vegetarian: recipe.vegetarian,
-    // vegan: recipe.vegan,
-    // glutenFree: recipe.gluten_free
-//   };
-// }
 // ========================= SQL QUERIES =========================
 
 /**
