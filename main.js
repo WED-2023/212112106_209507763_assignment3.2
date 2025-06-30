@@ -19,7 +19,6 @@ app.use(
     activeDuration: 1000 * 60 * 5, // if expiresIn < activeDuration,
     cookie: {
       httpOnly: false,
-
     }
     //the session will be extended by activeDuration milliseconds
   })
@@ -27,14 +26,14 @@ app.use(
 app.use(express.urlencoded({ extended: false })); // parse application/x-www-form-urlencoded
 app.use(express.static(path.join(__dirname, "public"))); //To serve static files such as images, CSS files, and JavaScript files
 //local:
-app.use(express.static(path.join(__dirname, "dist")));
+//app.use(express.static(path.join(__dirname, "dist")));
 //remote:
-// app.use(express.static(path.join(__dirname, '../assignment-3-3-frontend/dist')));
+app.use(express.static(path.join(__dirname, '../212112106_209507763_assignment3.3/dist')));
 
 app.get("/",function(req,res)
 { 
   //remote: 
-  // res.sendFile(path.join(__dirname, '../assignment-3-3-frontend/dist/index.html'));
+  res.sendFile(path.join(__dirname, '../212112106_209507763_assignment3.3/dist/index.html'));
   //local:
   res.sendFile(__dirname+"/index.html");
 
@@ -91,21 +90,22 @@ app.use("/users", user);
 app.use("/recipes", recipes);
 app.use("/", auth);
 
-// Default router
-app.use(function (err, req, res, next) {
-  console.error(err);
-  res.status(err.status || 500).send({ message: err.message, success: false });
-});
+// // Default router
+// app.use(function (err, req, res, next) {
+//   console.error(err);
+//   res.status(err.status || 500).send({ message: err.message, success: false });
+// });
 
-const server = app.listen(port, () => {
-  console.log(`Server listen on port ${port}`);
-});
+// const server = app.listen(port, () => {
+//   console.log(`Server listen on port ${port}`);
+// });
 
-process.on("SIGINT", function () {
-  if (server) {
-    server.close(() => console.log("server closed"));
-  }
-  process.exit();
-});
+// process.on("SIGINT", function () {
+//   if (server) {
+//     server.close(() => console.log("server closed"));
+//   }
+//   process.exit();
+// });
+module.exports = app; // Export the app for testing purposes
 
 

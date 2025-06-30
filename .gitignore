@@ -8,7 +8,7 @@ __pycache__/
 *.egg-info/
 dist/
 build/
-
+hw3.2_mysql_schema_script.txt
 # Node.js dependencies
 npm-debug.log
 yarn-error.log
@@ -20,3 +20,7 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# keys
+privkey.pem
+fullchain.pem

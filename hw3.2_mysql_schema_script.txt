@@ -1,5 +1,5 @@
-CREATE SCHEMA IF NOT EXISTS my_db;
-USE my_db;
+CREATE SCHEMA IF NOT EXISTS mydb;
+USE mydb;
 
 -- Users Table
 CREATE TABLE Users (
@@ -43,7 +43,7 @@ CREATE TABLE FamilyRecipes (
     vegetarian BOOLEAN,
     vegan BOOLEAN,
     gluten_free BOOLEAN,
-    amount_of_meals INT,
+    FOREIGN KEY (recipe_id) REFERENCES MyRecipes(recipe_id) ON DELETE CASCADE,
     FOREIGN KEY (username) REFERENCES Users(username) ON DELETE CASCADE
 );
 
@@ -52,7 +52,7 @@ CREATE TABLE Favorite_Recipes (
     username VARCHAR(50) NOT NULL,
     recipe_id INT NOT NULL,
     PRIMARY KEY (username, recipe_id),
-    FOREIGN KEY (username) REFERENCES Users(username) ON DELETE CASCADE,
+    FOREIGN KEY (username) REFERENCES Users(username) ON DELETE CASCADE
 );
 
 
