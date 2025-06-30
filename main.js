@@ -29,13 +29,12 @@ app.use(express.static(path.join(__dirname, "public"))); //To serve static files
 //app.use(express.static(path.join(__dirname, "dist")));
 //remote:
 app.use(express.static(path.join(__dirname, '../212112106_209507763_assignment3.3/dist')));
-
 app.get("/",function(req,res)
 { 
   //remote: 
   res.sendFile(path.join(__dirname, '../212112106_209507763_assignment3.3/dist/index.html'));
   //local:
-  res.sendFile(__dirname+"/index.html");
+  //res.sendFile(__dirname+"/index.html");
 
 });
 

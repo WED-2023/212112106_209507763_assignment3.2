@@ -1,5 +1,5 @@
 var mysql = require('mysql2');
-require("dotenv").config();
+//require("dotenv").config();
 
 
 const config={
@@ -11,6 +11,12 @@ connectionLimit:4,
   // database:"mydb"
 }
 const pool = new mysql.createPool(config);
+
+console.log('Connecting to DB:', {
+  host: process.env.host,
+  user: process.env.user,
+  database: process.env.database,
+});
 
 const connection =  () => {
   return new Promise((resolve, reject) => {
