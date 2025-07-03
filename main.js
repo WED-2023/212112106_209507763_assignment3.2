@@ -19,6 +19,7 @@ app.use(
     activeDuration: 1000 * 60 * 5, // if expiresIn < activeDuration,
     cookie: {
       httpOnly: false,
+      secure: false,   // ✅ required on HTTPS by abed 03072025 TURNED OFF TO FALSE
     }
     //the session will be extended by activeDuration milliseconds
   })
@@ -55,7 +56,8 @@ const recipes = require("./routes/recipes");
 const auth = require("./routes/auth");
 
 const corsOptions = {
-  origin: 'http://localhost:3001',
+ // origin: 'http://localhost:3001',
+  origin: process.env.VUE_APP_SERVER_DOMAIN || 'http://localhost:3001', // Adjust to your frontend domain
   credentials: true,            // if you need cookies/auth; otherwise omit
   methods: ['GET','POST','PUT','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'], // adjust if you send custom headers

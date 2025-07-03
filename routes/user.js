@@ -4,23 +4,61 @@ const DButils = require("./utils/DButils");
 const user_utils = require("./utils/user_utils");
 const recipe_utils = require("./utils/recipes_utils");
 const mySql = require("../routes/utils/MySql");
-const { addMyFamilyRecipe } = require("./utils/user_utils");
+const { addMyFamilyRecipe,getLastClickedRecipes } = require("./utils/user_utils");
 
+
+
+
+//last clicked 2nd version abed 03072025 below
+/**
+ * Get the user's 3 last viewed recipes
+ */
+router.get('/last', async (req, res, next) => {
+   console.log("starting /last:");
+  try {
+    const username = req.session?.username;
+    console.log("Username in /last:", username);
+
+    if (!username) {
+      return res.status(401).send("User not logged in.");
+    }
+
+    // Call the utility function to get last clicked recipes
+    const clickedRecipes = await getLastClickedRecipes(username);
+
+    // Return the list of clicked recipes
+    res.status(200).json(clickedRecipes);
+
+  } catch (err) {
+    console.log("JUMPED TO CATCH IN /last 3.2 :");
+    console.error("Error retrieving last viewed recipes:", err.message);
+    res.status(500).send("Server error while fetching recipes.");
+    next(err); // Pass the error to the next middleware
+  }
+});
 /**
  * Authenticate all incoming requests by middleware
  * user_id --> username
  */ 
+// router.use(async function (req, res, next) {
+//   if (req.session && req.session.username) {
+//     DButils.execQuery("SELECT username FROM users").then((users) => {
+//       if (users.find((x) => x.username === req.session.username)) {
+//         req.username = req.session.username;
+//         next();
+//       }
+//     }).catch(err => next(err));
+//   } else {
+//     res.sendStatus(401);
+//   }
+// });
+
+
 router.use(async function (req, res, next) {
-  if (req.session && req.session.username) {
-    DButils.execQuery("SELECT username FROM users").then((users) => {
-      if (users.find((x) => x.username === req.session.username)) {
-        req.username = req.session.username;
-        next();
-      }
-    }).catch(err => next(err));
-  } else {
-    res.sendStatus(401);
-  }
+  if (!req.session?.username || req.session.username === "") {
+    return res.status(404).send("Unauthorized from 3.2 express server: No session username found.");
+  } 
+  next(); // If no session or user found, just continue to next middleware
 });
 
 //=================== GET ===================
@@ -50,7 +88,7 @@ router.get('/favoriteRecipes', async (req, res, next) => {
 /**
  * Return the users recipes
  */
-router.get('/users/myRecipes', async (req, res, next) => {
+router.get('/myRecipes', async (req, res, next) => {
   try {
     const results = await user_utils.getMyRecipes(req); 
     res.status(200).send(results);
@@ -94,7 +132,6 @@ router.get("/exists/:username", async (req, res, next) => {
 router.get('/familyRecipes', async (req,res,next) => {
   try{
     const username = req.session?.username;
-    let favorite_recipes = {};
     const familyRecipes = await user_utils.getFamilyRecipes(username);
     // Return full recipe objects as JSON
     res.status(200).json(familyRecipes);
@@ -107,46 +144,67 @@ router.get('/familyRecipes', async (req,res,next) => {
 /**
  * Get the user's 3 last viewed recipes
  */
-router.get('/last', async (req, res, next) => {
-  let conn;
-  console.log("inside /last")
+// router.get('/last', async (req, res, next) => {
+//   let conn;
+//   console.log("inside /last")
+//   try {
+//     const username = req.session?.username;
+//     console.log("Username in /last: ", username)
+//     if (!username) {
+//       return res.status(401).send("User not logged in.");
+//     }
+
+//     //conn = await connection();
+//     conn = await mySql.connection();
+//     // Fetch lastClicks row for this user
+//     const result = await conn.query(
+//       "SELECT firstClicked, secondClicked, thirdClicked FROM lastClicks WHERE username = ?",
+//       [username]
+//     );
+
+//     if (result.length === 0) {
+//       // No record yet for this user
+//       return res.status(200).json([]);
+//     }
+
+//     const { firstClicked, secondClicked, thirdClicked } = result[0];
+
+//     // Return in order: most recent first
+//     const clicked = [thirdClicked, secondClicked, firstClicked].filter(
+//       (id) => id !== null && id !== undefined
+//     );
+
+//     res.status(200).json(clicked);
+//   } catch (err) {
+//     console.error("Error retrieving last viewed recipes:", err.message);
+//     res.status(500).send("Server error while fetching recipes.");
+//     next(err); 
+//   } finally {
+//     if (conn) await conn.release();
+//   }
+// });
+
+
+
+
+//Dummy test: problem was position of the function (should come above the router.use) and the functionaility, just check req.session?.username instead of DB
+router.get('/blah', async (req, res, next) => {
   try {
     const username = req.session?.username;
-    console.log("Username in /last: ", username)
-    if (!username) {
-      return res.status(401).send("User not logged in.");
-    }
+    if (!username) return res.status(401).send("User not logged in");
 
-    //conn = await connection();
-    conn = await mySql.connection();
-    // Fetch lastClicks row for this user
-    const result = await conn.query(
-      "SELECT firstClicked, secondClicked, thirdClicked FROM lastClicks WHERE username = ?",
-      [username]
-    );
+    // Get favorite recipe IDs
+    const recipes = await user_utils.getFavoriteRecipes(username);
 
-    if (result.length === 0) {
-      // No record yet for this user
-      return res.status(200).json([]);
-    }
+    // Map to plain array of IDs
+    const recipeIds = recipes.map(row => row.recipe_id);
 
-    const { firstClicked, secondClicked, thirdClicked } = result[0];
-
-    // Return in order: most recent first
-    const clicked = [thirdClicked, secondClicked, firstClicked].filter(
-      (id) => id !== null && id !== undefined
-    );
-
-    res.status(200).json(clicked);
-  } catch (err) {
-    console.error("Error retrieving last viewed recipes:", err.message);
-    res.status(500).send("Server error while fetching recipes.");
-    next(err); 
-  } finally {
-    if (conn) await conn.release();
+    res.status(200).json(recipeIds); // Return as JSON array
+  } catch (error) {
+    console.error("Error in /favoriteRecipes:", error);
+    next(error);
   }
 });
-
 //=================== END GET ===================
 
 

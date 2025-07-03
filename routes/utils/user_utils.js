@@ -99,6 +99,46 @@ async function getAllCountries() {
   }
 }
 
+/**
+ * Get the last clicked recipes for a user
+ * @param {string} username
+ * @returns {Promise<Array>} Array of recipe IDs
+ */
+async function getLastClickedRecipes(username) {
+  let conn;
+  try {
+    // Get a connection to the database
+    conn = await MySql.connection();
+
+    // Fetch the last clicked recipes (firstClicked, secondClicked, thirdClicked)
+    const result = await conn.query(
+      "SELECT firstClicked, secondClicked, thirdClicked FROM lastClicks WHERE username = ?",
+      [username]
+    );
+
+    // If no records are found, return an empty array
+    if (result.length === 0) {
+      console.log("No records found for user:", username);
+      return [];
+    }
+
+    const { firstClicked, secondClicked, thirdClicked } = result[0];
+
+    // Return the recipe IDs in order of most recent first
+    const clicked = [thirdClicked, secondClicked, firstClicked].filter(
+      (id) => id !== null && id !== undefined
+    );
+
+    console.log("Last clicked recipes for user", username, clicked);
+    return clicked;
+  } catch (err) {
+    console.error("Error retrieving last clicked recipes:", err.message);
+    throw err;
+  } finally {
+    if (conn) await conn.release();
+  }
+}
+
 
  /** Add a new family recipe (base in MyRecipes, details in FamilyRecipes)
  * @param {string} username 
@@ -220,4 +260,5 @@ exports.getAllCountries = getAllCountries;
 exports.removeFavoriteRecipe = removeFavoriteRecipe;
 exports.addFamilyRecipe = addFamilyRecipe;
 exports.saveLastClick = saveLastClick;
+exports.getLastClickedRecipes = getLastClickedRecipes;
 
