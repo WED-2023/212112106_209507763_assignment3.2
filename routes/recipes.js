@@ -275,6 +275,7 @@ router.post("/create", async (req, res, next) => {
   try {
     const username = req.session?.username;
     console.log("Session username:", username);
+    console.log("Session username:", username);
     if (!username) {
       return res.status(401).send({ message: "Unauthorized. Please log in." });
     }
@@ -301,6 +302,17 @@ router.post("/create", async (req, res, next) => {
       instructions,
       extendedIngredients
     });
+    console.log("Received recipe body:", {
+      recipe_title,
+      recipe_image,
+      prep_duration,
+      vegetarian,
+      vegan,
+      gluten_free,
+      amount_of_meals,
+      instructions,
+      extendedIngredients
+    });
 
     // Basic validation
     if (
@@ -311,6 +323,7 @@ router.post("/create", async (req, res, next) => {
     ) {
       return res.status(400).send({ message: "Invalid or missing fields in request" });
     }
+   console.log("Validation passed. Inserting into DB...");
    console.log("Validation passed. Inserting into DB...");
     // Insert into DB
     await addMyRecipe(username, {
@@ -325,6 +338,8 @@ router.post("/create", async (req, res, next) => {
       extendedIngredients
     });
 
+    
+    console.log("Recipe inserted successfully.");
     
     console.log("Recipe inserted successfully.");
     res.status(201).send({ message: "Recipe successfully created" });
