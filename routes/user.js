@@ -36,6 +36,24 @@ router.get('/last', async (req, res, next) => {
     next(err); // Pass the error to the next middleware
   }
 });
+
+
+/**
+ * Get the user's Family Recipes
+ */
+router.get('/familyRecipes', async (req,res,next) => {
+  try{
+    console.log(" *******************inside /familyRecipes");
+    const username = req.session?.username;
+    const familyRecipes = await user_utils.getFamilyRecipes(username);
+    // Return full recipe objects as JSON
+    res.status(200).json(familyRecipes);
+  } catch(error){
+    next(error);
+  }
+});
+
+
 /**
  * Authenticate all incoming requests by middleware
  * user_id --> username
@@ -123,20 +141,6 @@ router.get("/exists/:username", async (req, res, next) => {
     res.send({ exists });
   } catch (error) {
     next(error);
-  }
-});
-
-/**
- * Get the user's Family Recipes
- */
-router.get('/familyRecipes', async (req,res,next) => {
-  try{
-    const username = req.session?.username;
-    const familyRecipes = await user_utils.getFamilyRecipes(username);
-    // Return full recipe objects as JSON
-    res.status(200).json(familyRecipes);
-  } catch(error){
-    next(error); 
   }
 });
 
