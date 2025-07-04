@@ -18,7 +18,8 @@ app.use(
     duration: 24 * 60 * 60 * 1000, // expired after 20 sec
     activeDuration: 1000 * 60 * 5, // if expiresIn < activeDuration,
     cookie: {
-      httpOnly: false,
+      httpOnly: true, //changed to true by abed to prevent acces by JS, and increase security 03072025 fix cookie login mismatch
+      ephemeral: true, // when true, cookie will be deleted when browser is closed
       secure: false,   // ✅ required on HTTPS by abed 03072025 TURNED OFF TO FALSE
     }
     //the session will be extended by activeDuration milliseconds
