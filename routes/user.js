@@ -53,6 +53,22 @@ router.get('/familyRecipes', async (req,res,next) => {
   }
 });
 
+/**
+ * Return the users recipes
+ */
+router.get('/myRecipes', async (req, res, next) => {
+  try {
+    //const results = await user_utils.getMyRecipes(req); 
+    const results = await user_utils.getMyRecipesIDS(req); 
+   // res.status(200).send(results);
+    console.log("Results from getMyRecipesIDS:", results);
+   // console.log("Results as json:", json(results));
+    res.status(200).json(results); 
+  } catch (error) {
+    next(error);
+  }
+});
+
 
 /**
  * Authenticate all incoming requests by middleware
@@ -103,17 +119,7 @@ router.get('/favoriteRecipes', async (req, res, next) => {
 });
 
 
-/**
- * Return the users recipes
- */
-router.get('/myRecipes', async (req, res, next) => {
-  try {
-    const results = await user_utils.getMyRecipes(req); 
-    res.status(200).send(results);
-  } catch (error) {
-    next(error);
-  }
-});
+
 
 
 /**

@@ -82,6 +82,23 @@ async function getMyRecipes(req) {
     throw error;
   }
 }
+/**
+ * return user's recipes
+ * @param {string} req 
+ */
+async function getMyRecipesIDS(req) {
+  try{
+    //1
+      const username = req.session.username;
+      const recipes_ids = await DButils.execQuery(`SELECT recipe_id FROM myrecipes WHERE username = '${username}'`);
+      console.log("getMyRecipesIDS recipes_ids user_utils 3.2:", recipes_ids);
+      return recipes_ids;
+   
+}
+    catch (error) {
+    throw error;
+  }
+}
 
 /**
  * Get all countries from the REST Countries API by Abed
@@ -261,4 +278,5 @@ exports.removeFavoriteRecipe = removeFavoriteRecipe;
 exports.addFamilyRecipe = addFamilyRecipe;
 exports.saveLastClick = saveLastClick;
 exports.getLastClickedRecipes = getLastClickedRecipes;
+exports.getMyRecipesIDS = getMyRecipesIDS;
 
