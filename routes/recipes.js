@@ -31,7 +31,7 @@ router.get("/search", async (req, res, next) => {
       cuisine,
       diet,
       intolerances,
-      number = 5
+      number
     } = req.query;
 
     // If no query provided, check session cache
