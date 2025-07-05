@@ -46,8 +46,9 @@ router.get('/familyRecipes', async (req,res,next) => {
     console.log(" *******************inside /familyRecipes");
     const username = req.session?.username;
     const familyRecipes = await user_utils.getFamilyRecipes(username);
-    // Return full recipe objects as JSON
-    res.status(200).json(familyRecipes);
+
+    const recipeIds = familyRecipes.map(row => row.recipe_id);
+    res.status(200).json(recipeIds);
   } catch(error){
     next(error);
   }
@@ -62,8 +63,8 @@ router.get('/myRecipes', async (req, res, next) => {
     const results = await user_utils.getMyRecipesIDS(req); 
    // res.status(200).send(results);
     console.log("Results from getMyRecipesIDS:", results);
-   // console.log("Results as json:", json(results));
-    res.status(200).json(results); 
+    const recipeIds = results.map(row => row.recipe_id);
+    res.status(200).json(recipeIds);
   } catch (error) {
     next(error);
   }
