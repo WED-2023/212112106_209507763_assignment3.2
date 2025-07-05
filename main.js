@@ -31,8 +31,7 @@ app.use(express.static(path.join(__dirname, "public"))); //To serve static files
 //app.use(express.static(path.join(__dirname, "dist")));
 //remote:
 app.use(express.static(path.join(__dirname, '../212112106_209507763_assignment3.3/dist')));
-app.get("/",function(req,res)
-{ 
+app.get(/^\/(?!api).*/, (req, res) =>{
   //remote: 
   res.sendFile(path.join(__dirname, '../212112106_209507763_assignment3.3/dist/index.html'));
   //local:
@@ -88,9 +87,9 @@ app.use(function (req, res, next) {
 app.get("/alive", (req, res) => res.send("I'm alive"));
 
 // Routings
-app.use("/users", user);
-app.use("/recipes", recipes);
-app.use("/", auth);
+app.use("/api/users", user);
+app.use("/api/recipes", recipes);
+app.use("/api", auth);
 
 // // Default router
 // app.use(function (err, req, res, next) {
