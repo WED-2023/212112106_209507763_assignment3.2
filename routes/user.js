@@ -25,7 +25,7 @@ router.get('/last', async (req, res, next) => {
 
     // Call the utility function to get last clicked recipes
     const clickedRecipes = await getLastClickedRecipes(username);
-
+    console.log("Last Clicked recipes retrieved:", clickedRecipes);
     // Return the list of clicked recipes
     res.status(200).json(clickedRecipes);
 

@@ -32,17 +32,7 @@ async function spoonacularGet(path, params = {}) {
     }
 }
 
-// function extractRecipePreview(recipe, options = {}) {
-//     return {
-//         recipe_image: recipe.image,
-//         recipe_title: recipe.title,
-//         prep_duration: recipe.readyInMinutes,
-//         popularity: recipe.aggregateLikes || 0,
-//         vegetarian: recipe.vegetarian || false,
-//         vegan: recipe.vegan || false,
-//         gluten_free: recipe.glutenFree || false,
-//     };
-// }
+
 
 //New extract recipe by Abed 24062025
 function extractRecipePreview(recipe, options = {}) {
@@ -154,12 +144,11 @@ async function addMyRecipe(username, recipeData) {
 }
 
 
-
 module.exports = {
     spoonacularGet,
     extractRecipePreview,
     deleteMyRecipe,
-    addMyRecipe
+    addMyRecipe,
 };
 
 

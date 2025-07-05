@@ -3,7 +3,8 @@ var router = express.Router();
 const recipes_utils = require("./utils/recipes_utils");
 const MySql = require("../routes/utils/MySql");
 const { addMyRecipe } = require("./utils/recipes_utils");
-
+require('dotenv').config({ path: '../.env' });
+//const recipeUtils = require("../../212112106_209507763_assignment3.3/src/utils/recipeUtils");
 
 //=================== GET ===================
 
@@ -24,38 +25,125 @@ router.get("/random", async (req, res, next) => {
 });
 
 
+// router.get("/search", async (req, res, next) => {
+//   try {
+//     let {
+//       query,
+//       cuisine,
+//       diet,
+//       intolerances,
+//       number
+//     } = req.query;
+
+//     // If no query provided, check session cache
+//     if (!query) {
+//       if (req.session.lastSearch) {
+//         console.log("Using cached search from session");
+//         ({ query, cuisine, diet, intolerances, number } = req.session.lastSearch);
+//       } else {
+//         // respond with empty result
+//         return res.status(200).json({
+//           message: "No recent search in session",
+//           results: []
+//         });
+//       }
+//     }
+
+//     // Store current query in session
+//     req.session.lastSearch = { query, cuisine, diet, intolerances, number };
+
+//     // Call Spoonacular API
+//     const searchParams = { query, cuisine, diet, intolerances, number };
+//     const response = await recipes_utils.spoonacularGet("/complexSearch", searchParams);
+//     console.log("Spoonacular search response 3.2:", JSON.stringify(response, null, 2));
+//     res.status(200).json(response.results || response);
+
+//   } catch (error) {
+//     console.error("Spoonacular search failed:", error.message);
+//     const status = error.response?.status || 500;
+//     res.status(status).send({ message: "Search failed", detail: error.message });
+//   }
+// });
+
+
+//V2 BY ABED WORKS FOR SEARCH PAGE BELOW
+// router.get("/search", async (req, res, next) => {
+//   try {
+//     let { query, cuisine, diet, intolerances, number } = req.query;
+
+//     // If no query provided, check session cache
+//     if (!query) {
+//       if (req.session.lastSearch) {
+//         ({ query, cuisine, diet, intolerances, number } = req.session.lastSearch);
+//       } else {
+//         return res.status(200).json([]);
+//       }
+//     }
+
+//     // Store current query in session
+//     req.session.lastSearch = { query, cuisine, diet, intolerances, number };
+
+//     // 1. Call Spoonacular /complexSearch
+//     const searchParams = { query, cuisine, diet, intolerances, number };
+//     const response = await recipes_utils.spoonacularGet("/complexSearch", searchParams);
+
+//     // 2. Extract recipe IDs
+//     const results = response.results || [];
+//     const recipeIds = results.map(r => r.id);
+
+//     if (!recipeIds.length) {
+//       return res.status(200).json([]);
+//     }
+
+//     // 3. Use fetchRecipes with the IDs
+//     const recipes = await recipes_utils.fetchRecipes({
+//       ids: recipeIds,
+//       serverDomain: process.env.VUE_APP_SERVER_DOMAIN || "http://localhost:3000",
+//       logPurpose: "Search Results",
+//       withCredentials: true,
+//       req
+//     });
+
+//     return res.status(200).json(recipes);
+
+//   } catch (error) {
+//     console.error("Spoonacular search failed:", error.message);
+//     const status = error.response?.status || 500;
+//     res.status(status).send({ message: "Search failed", detail: error.message });
+//   }
+// });
+
+//V3 BY ABED, RETURN IDS ONLY FOR GENERIC FETCH RECIPES
 router.get("/search", async (req, res, next) => {
   try {
-    let {
-      query,
-      cuisine,
-      diet,
-      intolerances,
-      number
-    } = req.query;
+    let { query, cuisine, diet, intolerances, number } = req.query;
 
     // If no query provided, check session cache
     if (!query) {
       if (req.session.lastSearch) {
-        console.log("Using cached search from session");
         ({ query, cuisine, diet, intolerances, number } = req.session.lastSearch);
       } else {
-        // respond with empty result
-        return res.status(200).json({
-          message: "No recent search in session",
-          results: []
-        });
+        return res.status(200).json([]);
       }
     }
 
     // Store current query in session
     req.session.lastSearch = { query, cuisine, diet, intolerances, number };
 
-    // Call Spoonacular API
+    // 1. Call Spoonacular /complexSearch
     const searchParams = { query, cuisine, diet, intolerances, number };
     const response = await recipes_utils.spoonacularGet("/complexSearch", searchParams);
+    console.log("Spoonacular search response 3.2:", response);
+    // 2. Extract recipe IDs
+    const results = response.results || [];
+    const recipeIds = results.map(r => r.id);
+    console.log("Extracted recipe IDs:", recipeIds);
+    if (!recipeIds.length) {
+      return res.status(200).json([]);
+    }
 
-    res.status(200).json(response.results || response);
+    return res.status(200).json(recipeIds);
+
   } catch (error) {
     console.error("Spoonacular search failed:", error.message);
     const status = error.response?.status || 500;
@@ -64,50 +152,7 @@ router.get("/search", async (req, res, next) => {
 });
 
 
-
 //Search API by ID, first search in database if not exist search in API
-// router.get("/:recipeId", async (req, res) => {
-//   const { recipeId } = req.params;
-
-//   let conn;
-//   try {
-//     // Step 1: Connect to DB
-//     conn = await MySql.connection();
-//     const result = await conn.query(
-//       "SELECT * FROM myrecipes WHERE recipe_id = ?",
-//       [recipeId]
-//     );
-
-//     if (result.length > 0) {
-//       console.log(`Recipe ${recipeId} found in local database.`);
-//       res.status(200).json(result[0]);
-//     } else {
-//       console.log(`Recipe ${recipeId} not found in DB. Fetching from Spoonacular.`);
-
-//       // Step 2: Fetch from Spoonacular
-//       const data = await recipes_utils.spoonacularGet(`/${recipeId}/information`, {
-//         includeNutrition: false
-//       });
-
-//       const preview = recipes_utils.extractRecipePreview(data);
-//       res.status(200).json(preview);
-//     }
-//   } catch (err) {
-//     console.error(`Error fetching recipe ${recipeId}:`, err.message);
-//     const status = err.response?.status || 500;
-
-//     if (status === 404) {
-//       res.status(404).send({ message: "Recipe not found" });
-//     } else {
-//       res.status(500).send({ message: "Failed to fetch recipe preview" });
-//     }
-//   } finally {
-//     if (conn) {
-//       await conn.release(); // Ensure connection is released back to pool
-//     }
-//   }
-// });
-
 // In your Express router file:
 router.get("/:recipeId", async (req, res) => {
   const { recipeId } = req.params;
@@ -271,6 +316,8 @@ router.get("/:recipeId", async (req, res) => {
 
 //=================== POST ===================
 
+// Create a new recipe
+// This endpoint is for user-created recipes, not Spoonacular
 router.post("/create", async (req, res, next) => {
   try {
     const username = req.session?.username;
@@ -302,21 +349,10 @@ router.post("/create", async (req, res, next) => {
       instructions,
       extendedIngredients
     });
-    console.log("Received recipe body:", {
-      recipe_title,
-      recipe_image,
-      prep_duration,
-      vegetarian,
-      vegan,
-      gluten_free,
-      amount_of_meals,
-      instructions,
-      extendedIngredients
-    });
 
     // Basic validation
     if (
-        !recipe_title || !recipe_image || !prep_duration || !instructions ||
+        !recipe_title || !prep_duration || !instructions ||
         !Array.isArray(extendedIngredients) || extendedIngredients.length === 0 ||
         typeof vegetarian !== "boolean" || typeof vegan !== "boolean" || typeof gluten_free !== "boolean" ||
         typeof amount_of_meals !== "number"
@@ -324,7 +360,7 @@ router.post("/create", async (req, res, next) => {
       return res.status(400).send({ message: "Invalid or missing fields in request" });
     }
    console.log("Validation passed. Inserting into DB...");
-   console.log("Validation passed. Inserting into DB...");
+
     // Insert into DB
     await addMyRecipe(username, {
       recipe_title,
@@ -337,9 +373,6 @@ router.post("/create", async (req, res, next) => {
       instructions,
       extendedIngredients
     });
-
-    
-    console.log("Recipe inserted successfully.");
     
     console.log("Recipe inserted successfully.");
     res.status(201).send({ message: "Recipe successfully created" });
@@ -347,9 +380,8 @@ router.post("/create", async (req, res, next) => {
   } catch (err) {
     console.error("Failed to create recipe:", err.message);
     next(err);
-  }
+  }
 });
-
 //=================== END POST ===================
 
 
