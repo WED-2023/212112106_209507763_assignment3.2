@@ -1,10 +1,8 @@
 var express = require("express");
 var router = express.Router();
 const recipes_utils = require("./utils/recipes_utils");
-const MySql = require("../routes/utils/MySql");
 const { addMyRecipe } = require("./utils/recipes_utils");
 require('dotenv').config({ path: '../.env' });
-//const recipeUtils = require("../../212112106_209507763_assignment3.3/src/utils/recipeUtils");
 
 //=================== GET ===================
 
@@ -157,16 +155,10 @@ router.get("/search", async (req, res, next) => {
 router.get("/:recipeId", async (req, res) => {
   const { recipeId } = req.params;
   const username = req.session?.username;
-  let conn;
 
   try {
-    conn = await MySql.connection();
-
     // Try local DB first
-    const rows = await conn.query(
-      "SELECT * FROM myrecipes WHERE recipe_id = ?",
-      [recipeId]
-    );
+    const rows = await recipes_utils.getLocalRecipe(username, recipeId);
 
     let recipeData;
     if (rows.length > 0) {
@@ -265,14 +257,10 @@ router.get("/:recipeId", async (req, res) => {
     let clicked_by_user = false;
     if (username) {
       try {
-        const clickRows = await conn.query(
-          "SELECT firstClicked, secondClicked, thirdClicked FROM lastClicks WHERE username = ?",
-          [username]
-        );
+        const clickRows = await recipes_utils.getLastClickedRecipes(username);
         if (clickRows.length > 0) {
-          const { firstClicked, secondClicked, thirdClicked } = clickRows[0];
           // Compare as strings or numbers
-          const ids = [firstClicked, secondClicked, thirdClicked].map(x => String(x));
+          const ids = clickRows.map(x => String(x));
           if (ids.includes(String(recipeId))) {
             clicked_by_user = true;
           }
@@ -287,10 +275,7 @@ router.get("/:recipeId", async (req, res) => {
     let saved_by_user = false;
     if (username) {
       try {
-        const favRows = await conn.query(
-          "SELECT 1 FROM favorite_recipes WHERE username = ? AND recipe_id = ?",
-          [username, recipeId]
-        );
+        const favRows = await recipes_utils.getRecipeFromFavorites(username, recipeId);
         if (favRows.length > 0) {
           saved_by_user = true;
         }
@@ -304,10 +289,6 @@ router.get("/:recipeId", async (req, res) => {
   } catch (err) {
     console.error(`Error fetching recipe ${recipeId}:`, err);
     return res.status(500).send({ message: "Server error fetching recipe details" });
-  } finally {
-    if (conn) {
-      await conn.release();
-    }
   }
 });
 

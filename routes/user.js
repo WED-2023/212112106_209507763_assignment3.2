@@ -1,10 +1,8 @@
 var express = require("express");
 var router = express.Router();
-const DButils = require("./utils/DButils");
 const user_utils = require("./utils/user_utils");
 const recipe_utils = require("./utils/recipes_utils");
-const mySql = require("../routes/utils/MySql");
-const { addMyFamilyRecipe,getLastClickedRecipes } = require("./utils/user_utils");
+
 
 
 
@@ -24,7 +22,7 @@ router.get('/last', async (req, res, next) => {
     }
 
     // Call the utility function to get last clicked recipes
-    const clickedRecipes = await getLastClickedRecipes(username);
+    const clickedRecipes = await recipe_utils.getLastClickedRecipes(username);
     console.log("Last Clicked recipes retrieved:", clickedRecipes);
     // Return the list of clicked recipes
     res.status(200).json(clickedRecipes);
@@ -45,7 +43,7 @@ router.get('/familyRecipes', async (req,res,next) => {
   try{
     console.log(" *******************inside /familyRecipes");
     const username = req.session?.username;
-    const familyRecipes = await user_utils.getFamilyRecipes(username);
+    const familyRecipes = await recipe_utils.getFamilyRecipes(username);
 
     const recipeIds = familyRecipes.map(row => row.recipe_id);
     res.status(200).json(recipeIds);
@@ -59,8 +57,7 @@ router.get('/familyRecipes', async (req,res,next) => {
  */
 router.get('/myRecipes', async (req, res, next) => {
   try {
-    //const results = await user_utils.getMyRecipes(req); 
-    const results = await user_utils.getMyRecipesIDS(req); 
+    const results = await recipe_utils.getMyRecipesIDS(req.session.username);
    // res.status(200).send(results);
     console.log("Results from getMyRecipesIDS:", results);
     const recipeIds = results.map(row => row.recipe_id);
@@ -107,7 +104,7 @@ router.get('/favoriteRecipes', async (req, res, next) => {
     if (!username) return res.status(401).send("User not logged in");
 
     // Get favorite recipe IDs
-    const recipes = await user_utils.getFavoriteRecipes(username);
+    const recipes = await recipe_utils.getFavoriteRecipes(username);
 
     // Map to plain array of IDs
     const recipeIds = recipes.map(row => row.recipe_id);
@@ -152,52 +149,6 @@ router.get("/exists/:username", async (req, res, next) => {
 });
 
 
-/**
- * Get the user's 3 last viewed recipes
- */
-// router.get('/last', async (req, res, next) => {
-//   let conn;
-//   console.log("inside /last")
-//   try {
-//     const username = req.session?.username;
-//     console.log("Username in /last: ", username)
-//     if (!username) {
-//       return res.status(401).send("User not logged in.");
-//     }
-
-//     //conn = await connection();
-//     conn = await mySql.connection();
-//     // Fetch lastClicks row for this user
-//     const result = await conn.query(
-//       "SELECT firstClicked, secondClicked, thirdClicked FROM lastClicks WHERE username = ?",
-//       [username]
-//     );
-
-//     if (result.length === 0) {
-//       // No record yet for this user
-//       return res.status(200).json([]);
-//     }
-
-//     const { firstClicked, secondClicked, thirdClicked } = result[0];
-
-//     // Return in order: most recent first
-//     const clicked = [thirdClicked, secondClicked, firstClicked].filter(
-//       (id) => id !== null && id !== undefined
-//     );
-
-//     res.status(200).json(clicked);
-//   } catch (err) {
-//     console.error("Error retrieving last viewed recipes:", err.message);
-//     res.status(500).send("Server error while fetching recipes.");
-//     next(err); 
-//   } finally {
-//     if (conn) await conn.release();
-//   }
-// });
-
-
-
-
 //Dummy test: problem was position of the function (should come above the router.use) and the functionaility, just check req.session?.username instead of DB
 router.get('/blah', async (req, res, next) => {
   try {
@@ -205,7 +156,7 @@ router.get('/blah', async (req, res, next) => {
     if (!username) return res.status(401).send("User not logged in");
 
     // Get favorite recipe IDs
-    const recipes = await user_utils.getFavoriteRecipes(username);
+    const recipes = await recipe_utils.getFavoriteRecipes(username);
 
     // Map to plain array of IDs
     const recipeIds = recipes.map(row => row.recipe_id);
@@ -233,34 +184,13 @@ router.post("/favoriteRecipes/:recipeId", async (req, res) => {
     console.warn("[WARN] No username in session");
     return res.status(401).send("User not logged in");
   }
+  let foundLocally = 0;
 
-  let myRecipesRes;
-  let familyRecipesRes;
-  let favCheck;
-  let conn;
+  foundLocally = recipe_utils.checkIfRecipeIsLocal(username, recipeId);
   try {
-    conn = await mySql.connection();
-
-    // 1) Check in myrecipes
-    myRecipesRes = await conn.query(
-      "SELECT recipe_id FROM myrecipes WHERE recipe_id = ? AND username = ?",
-      [recipeId, username]
-    );
-    console.log(`[DB] myRecipes match count: ${myRecipesRes.length}`);
-    // 2) Check in familyrecipes if not found in myrecipes
-    let foundLocally = myRecipesRes.length > 0;
-    if (!foundLocally) {
-        familyRecipesRes = await conn.query(
-        "SELECT recipe_id FROM familyrecipes WHERE recipe_id = ? AND username = ?",
-        [recipeId, username]
-      );
-      console.log(`[DB] familyRecipes match count: ${familyRecipesRes.length}`);
-      foundLocally = familyRecipesRes.length > 0;
-    }
-         
 
     // 3) If not found locally, check Spoonacular API
-    if (!foundLocally) {
+    if (foundLocally < 1) {
     
       try {
         console.log("[INFO] Recipe not found locally. Trying Spoonacular API...");
@@ -280,32 +210,12 @@ router.post("/favoriteRecipes/:recipeId", async (req, res) => {
       }
     }
 
-    // 4) Mark as favorite (insert into favorite_recipes if not already favorite)
-      favCheck = await conn.query(
-      "SELECT * FROM favorite_recipes WHERE username = ? AND recipe_id = ?",
-      [username, recipeId]
-    );
-    console.log(`[DB] favorite_recipes match count: ${favCheck.length}`);
-
-    if (favCheck.length === 0) {
-      await conn.query(
-        "INSERT INTO favorite_recipes (username, recipe_id) VALUES (?, ?)",
-        [username, recipeId]
-      );
-      await conn.query("COMMIT"); //Commit changes in DB
-      console.log("[DB] Inserted into favorite_recipes");
-    }
-    else{
-        console.log("[INFO] Recipe already marked as favorite");
-    }
-
+    await recipe_utils.addRecipeToFavorites(username, recipeId);
     res.status(200).send("Recipe marked as favorite");
 
   } catch (err) {
     console.error("Error marking recipe as favorite:", err);
     res.status(500).send("Server error");
-  } finally {
-    if (conn) await conn.release();
   }
 });
 
@@ -316,37 +226,21 @@ router.post("/favoriteRecipes/:recipeId", async (req, res) => {
  * Add last recipe clicked into the database until a max of 3
  */
 router.post("/clickOnRecipe", async (req, res, next) => {
-  let conn;
   try {
     
     const username = req.session.username;
     const recipeId = req.body.recipeId;
-    conn = await mySql.connection();
-    console.log("[DEBUG] /clickOnRecipe called");
-    console.log("[DEBUG] Session username:", username);
-    console.log("[DEBUG] Received recipeId:", recipeId);
-      // 1) Check in myrecipes
-    myRecipesRes = await conn.query(
-      "SELECT recipe_id FROM myrecipes WHERE recipe_id = ? AND username = ?",
-      [recipeId, username]
-    );
+    let foundLocally = 0;
 
-    // 2) Check in familyrecipes if not found in myrecipes
-    let foundLocally = myRecipesRes.length > 0;
-    if (!foundLocally) {
-        familyRecipesRes = await conn.query(
-        "SELECT recipe_id FROM familyrecipes WHERE recipe_id = ? AND username = ?",
-        [recipeId, username]
-      );
-      foundLocally = familyRecipesRes.length > 0;
-    }
+    foundLocally = recipe_utils.checkIfRecipeIsLocal(username, recipeId);
 
-    // 3) If not found locally, check Spoonacular API
-    if (!foundLocally) {
+    if (foundLocally < 1) {
       try {
-          const apiRes = await recipe_utils.spoonacularGet(`/${recipeId}/information`, {
+
+        const apiRes = await recipe_utils.spoonacularGet(`/${recipeId}/information`, {
             includeNutrition: false
           });
+
         if (!apiRes || apiRes.status === 404) {
           return res.status(404).send("Recipe not found locally or in Spoonacular");
         }
@@ -364,9 +258,10 @@ router.post("/clickOnRecipe", async (req, res, next) => {
       console.warn("[WARN] No recipeId provided in request body");
       return res.status(400).send("Bad Request: recipeId is required.");
     }
+    console.log("[DEBUG] BEFORE SAVE LAST saveLastClick result:");
 
-    const result = await user_utils.saveLastClick(username, recipeId);
-    console.log("[DEBUG] saveLastClick result:", result);
+    const result = await recipe_utils.saveLastClick(username, recipeId);
+    console.log(`[DEBUG] saveLastClick result, username: ${username}, recipe_id: ${recipeId}`);
     res.status(200).send({ message: "Recipe click registered." });
     // Fetch recipe preview from DB or Spoonacular here...
   } catch (err) {
@@ -415,7 +310,7 @@ router.post("/familyRecipes", async (req, res, next) => {
     }
 
      // Insert into DB
-    await user_utils.addFamilyRecipe(username, {
+    await recipe_utils.addFamilyRecipe(username, {
       recipe_id,
       username,
       recipe_title,
@@ -452,7 +347,7 @@ router.delete('/favoriteRecipes/:recipeId', async (req,res,next) => {
   try{
     const username = req.session.username;
     const recipeId = req.params.recipeId;
-    await user_utils.removeFavoriteRecipe(username,recipeId);
+    await recipe_utils.removeFavoriteRecipe(username,recipeId);
     res.status(200).send("The Recipe successfully removed from favorites");
   } catch(error){
     console.error("Error message:", error.message);

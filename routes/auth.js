@@ -1,8 +1,9 @@
 var express = require("express");
 var router = express.Router();
-const MySql = require("../routes/utils/MySql");
-const DButils = require("../routes/utils/DButils");
+const recipes_utils = require("./utils/recipes_utils");
+const user_utils = require("./utils/user_utils");
 const bcrypt = require("bcrypt");
+const {getUserDetails} = require("./utils/user_utils");
 
 router.get("/", async (req, res) => {
   try {
@@ -20,21 +21,12 @@ router.get("/", async (req, res) => {
 
     // If user is logged in, fetch last clicked recipe IDs
     if (req.session?.username) {
-      const conn = await connection();
-      try {
-        const result = await conn.query(
-          "SELECT firstClicked, secondClicked, thirdClicked FROM lastClicks WHERE username = ?",
-          [req.session.username]
-        );
 
-        if (result.length > 0) {
-          const { firstClicked, secondClicked, thirdClicked } = result[0];
-          // Most recent first order
-          response.lastClickedRecipes = [thirdClicked, secondClicked, firstClicked].filter(id => id !== null && id !== undefined);
-        }
-      } finally {
-        await conn.release();
+      const result = await recipes_utils.getLastClickedRecipes(req.session.username);
+      if (result.length > 0) {
+        response.lastClickedRecipes = result;
       }
+
     } else {
       // User not logged in, optionally you could send 401 or just no lastClickedRecipes
       // return res.status(401).send("You are not logged in");
@@ -80,28 +72,15 @@ router.post("/auth/register", async (req, res, next) => {
     if (password !== password_confirmation) {
       return res.status(400).send("Password confirmation does not match");
     }
-    const connection = await MySql.connection();
-
     // Check if username already exists
-    const existingUsers = await connection.query("SELECT username FROM users WHERE username = ?", [username]);
+    const existingUsers = user_utils.checkIfUserExist(username);
     if (existingUsers.length > 0) {
-      await connection.release();
       return res.status(409).send("Username already exists");
     }
     // Hash password
     const hash_password = bcrypt.hashSync(password, 14);
 
-
-    // Insert user
-    await connection.query(
-        `INSERT INTO users (username, first_name, last_name, country, password, email)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [username, firstname, lastname, country, hash_password, email]
-    );
-
-    await connection.query("COMMIT"); // doesnt enter intom DB the last commit
-
-    await connection.release();
+    await user_utils.addUser(username, firstname, lastname, country, email, hash_password)
     res.status(201).send({ message: "user created", success: true });
 
   } catch (error) {
@@ -118,19 +97,11 @@ router.post("/auth/login", async (req, res, next) => {
     if (!username || !password)
       return res.status(400).send("Missing credentials");
 
-    const connection = await MySql.connection();
+    const user = await getUserDetails(username)
 
-    const users = await connection.query(
-        "SELECT * FROM users WHERE username = ?",
-        [username]
-    );
-
-    await connection.release();
-
-    if (users.length === 0)
+    if (user.length === 0)
       return res.status(401).send("Invalid username or password");
 
-    const user = users[0];
 
     const validPassword = bcrypt.compareSync(password, user.password);
     if (!validPassword)
