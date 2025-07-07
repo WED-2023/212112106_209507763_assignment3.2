@@ -39,16 +39,7 @@ app.get(/^\/(?!api).*/, (req, res) =>{
 
 });
 
-// app.use(cors());
-// app.options("*", cors());
 
-// const corsConfig = {
-//   origin: true,
-//   credentials: true
-// };
-
-// app.use(cors(corsConfig));
-// app.options("*", cors(corsConfig));
 var port = process.env.PORT || "3000"; //local=3000 remote=80
 //#endregion
 const user = require("./routes/user");
@@ -56,8 +47,7 @@ const recipes = require("./routes/recipes");
 const auth = require("./routes/auth");
 
 const corsOptions = {
- // origin: 'http://localhost:3001',
-  origin: process.env.VUE_APP_SERVER_DOMAIN || 'http://localhost:3001', // Adjust to your frontend domain
+  origin: process.env.VUE_APP_SERVER_DOMAIN || 'http://localhost:3001',
   credentials: true,            // if you need cookies/auth; otherwise omit
   methods: ['GET','POST','PUT','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'], // adjust if you send custom headers
@@ -91,23 +81,6 @@ app.use("/api/users", user);
 app.use("/api/recipes", recipes);
 app.use("/api", auth);
 
-// // Default router
-// app.use(function (err, req, res, next) {
-//   console.error(err);
-//   res.status(err.status || 500).send({ message: err.message, success: false });
-// });
 
-// const server = app.listen(port, () => {
-//   console.log(`Server listen on port ${port}`);
-// });
-
-// process.on("SIGINT", function () {
-//   if (server) {
-//     server.close(() => console.log("server closed"));
-//   }
-//   process.exit();
-// });
 module.exports = app; // Export the app for testing purposes
 
-
-// TEST!!!!!!!! of 3.2
