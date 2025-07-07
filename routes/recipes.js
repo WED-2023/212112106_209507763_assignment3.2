@@ -10,7 +10,7 @@ require('dotenv').config({ path: '../.env' });
 router.get("/random", async (req, res, next) => {
   try {
     const data = await recipes_utils.spoonacularGet("/random", { number: 3 });
-    console.log("Raw data from Spoonacular:", JSON.stringify(data.recipes, null, 2)); 
+    console.log("Raw data from Spoonacular:", JSON.stringify(data.recipes, null, 2));
     const previews = data.recipes.map(recipe =>
         recipes_utils.extractRecipePreview(recipe)
         
@@ -164,16 +164,7 @@ router.get("/:recipeId", async (req, res) => {
     if (rows.length > 0) {
       // Found in local DB. Adjust column names if different in your schema.
       const row = rows[0];
-      // Parse ingredients JSON if stored as text; otherwise adjust.
-      let ingredients = [];
-      if (row.ingredients_json) {
-        try {
-          const parsed = JSON.parse(row.ingredients_json);
-          if (Array.isArray(parsed)) {
-            ingredients = parsed;
-          }
-        } catch (_) {}
-      }
+
       recipeData = {
         recipe_image: row.recipe_image,
         recipe_title: row.recipe_title,
@@ -182,7 +173,7 @@ router.get("/:recipeId", async (req, res) => {
         vegetarian: Boolean(row.vegetarian),
         vegan: Boolean(row.vegan),
         gluten_free: Boolean(row.gluten_free),
-        ingredients,                 // array of { name, amount }
+        ingredients: row.extendedIngredients,                 // array of { name, amount }
         instructions: row.instructions || "", // text
         amount_of_meals: row.amount_of_meals,
         id: String(recipeId),
@@ -250,6 +241,7 @@ router.get("/:recipeId", async (req, res) => {
         amount_of_meals: data.servings || null,
         id: String(recipeId),
       };
+
     }
 
     // Now add user-specific flags:
