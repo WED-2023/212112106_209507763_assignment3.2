@@ -2,6 +2,7 @@ var express = require("express");
 var router = express.Router();
 const recipes_utils = require("./utils/recipes_utils");
 const { addMyRecipe } = require("./utils/recipes_utils");
+const recipe_utils = require("./utils/recipes_utils");
 require('dotenv').config({ path: '../.env' });
 
 //=================== GET ===================
@@ -22,7 +23,17 @@ router.get("/random", async (req, res, next) => {
   }
 });
 
+router.get("/familyRecipes", async (req, res, next) => {
+  try{
+    console.log(" *******************inside /familyRecipes");
+    const familyRecipes = await recipe_utils.getFamilyRecipes();
 
+    const recipeIds = familyRecipes.map(row => row.recipe_id);
+    res.status(200).json(recipeIds);
+  } catch(error){
+    next(error);
+  }
+});
 // router.get("/search", async (req, res, next) => {
 //   try {
 //     let {
@@ -177,6 +188,10 @@ router.get("/:recipeId", async (req, res) => {
         instructions: row.instructions || "", // text
         amount_of_meals: row.amount_of_meals,
         id: String(recipeId),
+        ...(recipeId < 0 && {
+          recipe_author: row.recipe_author,
+          recipe_season: row.recipe_season
+        })
       };
     } else {
       // Not in DB: fetch from Spoonacular

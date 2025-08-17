@@ -68,7 +68,7 @@ async function checkIfRecipeIsLocal(username, recipe_id) {
             return 1
         } else {
             localRecipeRes = await conn.query(
-                "SELECT recipe_id FROM familyrecipes WHERE recipe_id = ? AND username = ?",
+                "SELECT recipe_id FROM familyrecipes WHERE recipe_id = ?",
                 [recipe_id, username]
             );
             if (localRecipeRes.length > 0) {
@@ -328,69 +328,13 @@ async function getRecipeFromFavorites(username, recipe_id) {
 
 // -------------------START OF FAMILY RECIPES-------------------
 
-/** Add a new family recipe (base in MyRecipes, details in FamilyRecipes)
- * @param {string} username
- * @param {object} recipeData
- */
-async function addFamilyRecipe(username, recipeData) {
-    try {
-        const {
-            recipe_id,
-            recipe_title,
-            recipe_image,
-            prep_duration,
-            vegetarian,
-            vegan,
-            gluten_free,
-            amount_of_meals,
-            recipe_instructions,
-            extendedIngredients,
-            recipe_author,
-            recipe_season
-        } = recipeData;
-
-        // Step 2: Insert into FamilyRecipes
-        const insertFamilyQuery = `
-      INSERT INTO FamilyRecipes (
-        recipe_id, username, recipe_author, recipe_season, extendedIngredients,
-        recipe_instructions, recipe_title, recipe_image, prep_duration,
-        vegetarian, vegan, gluten_free, amount_of_meals
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-        await DButils.execQuery({
-            sql: insertFamilyQuery,
-            values: [
-                recipe_id,
-                username,
-                recipe_author,
-                recipe_season,
-                JSON.stringify(extendedIngredients),
-                recipe_instructions,
-                recipe_title,
-                recipe_image,
-                prep_duration,
-                vegetarian,
-                vegan,
-                gluten_free,
-                amount_of_meals
-            ]
-        });
-
-    } catch (error) {
-        throw error;
-    }
-}
-
-
 
 /**
- * Return user's family recipes
- * @param {string} username
+ * Return family recipes
  */
-async function getFamilyRecipes(username){
+async function getFamilyRecipes(){
     try {
-        return await DButils.execQuery(`SELECT * FROM familyrecipes WHERE username = '${username}'`);
+        return await DButils.execQuery(`SELECT * FROM familyrecipes`);
     }
     catch (error) {
         throw error;
@@ -512,7 +456,6 @@ module.exports = {
     getMyRecipesIDS,
     getFavoriteRecipes,
     removeFavoriteRecipe,
-    addFamilyRecipe,
     getFamilyRecipes,
     getLastClickedRecipes,
     saveLastClick,

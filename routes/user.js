@@ -37,22 +37,6 @@ router.get('/last', async (req, res, next) => {
 
 
 /**
- * Get the user's Family Recipes
- */
-router.get('/familyRecipes', async (req,res,next) => {
-  try{
-    console.log(" *******************inside /familyRecipes");
-    const username = req.session?.username;
-    const familyRecipes = await recipe_utils.getFamilyRecipes(username);
-
-    const recipeIds = familyRecipes.map(row => row.recipe_id);
-    res.status(200).json(recipeIds);
-  } catch(error){
-    next(error);
-  }
-});
-
-/**
  * Return the users recipes
  */
 router.get('/myRecipes', async (req, res, next) => {
@@ -270,68 +254,6 @@ router.post("/clickOnRecipe", async (req, res, next) => {
   }
 });
 
-
-
-/**
- * Add a family recipe
- */
-router.post("/familyRecipes", async (req, res, next) => {
-  const username = req.session.username;
-  try {
-    if (!req.session?.username) {
-      return res.status(401).send("Unauthorized");
-    }
-    const {
-      recipe_id,
-      recipe_title,
-      recipe_image,
-      recipe_author,
-      recipe_season,
-      prep_duration,
-      vegetarian,
-      vegan,
-      gluten_free,
-      amount_of_meals,
-      recipe_instructions,
-      extendedIngredients
-    } = req.body;
-
-    // Basic validation
-    if (
-        !recipe_title || !recipe_image || !prep_duration || !recipe_instructions ||
-        !Array.isArray(extendedIngredients) || extendedIngredients.length === 0 ||
-        typeof vegetarian !== "boolean" || typeof vegan !== "boolean" || typeof gluten_free !== "boolean" ||
-        typeof amount_of_meals !== "number"
-    ) {
-      return res.status(400).send({ message: "Invalid or missing fields in request" });
-    }
-    if (!recipe_title || !recipe_author || !recipe_instructions) {
-      return res.status(400).send("Missing required fields: title, author, or instructions");
-    }
-
-     // Insert into DB
-    await recipe_utils.addFamilyRecipe(username, {
-      recipe_id,
-      username,
-      recipe_title,
-      recipe_image,
-      recipe_author,
-      recipe_season,
-      prep_duration,
-      vegetarian,
-      vegan,
-      gluten_free,
-      amount_of_meals,
-      recipe_instructions,
-      extendedIngredients
-    });
-
-    res.status(201).send({ message: "Family recipe added successfully" });
-
-  } catch (err) {
-    next(err);
-  }
-});
 
 //=================== END POST ===================
 
